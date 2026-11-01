@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canon PIXMA G640 Micro-RIP</title>
+  <style>
+    :root {
+      --bg: #0b0d13;
+      --panel-bg: #141721;
+      --card-bg: #1a1e2c;
+      --accent: #2563eb;
+      --accent-hover: #3b82f6;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #283046;
+      --border-focus: #3b82f6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      height: 54px;
+      padding: 0 20px;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, #ef4444, #f97316);
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      color: white;
+    }
+    .brand h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .brand span {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: 6px;
+      background: #1f2537;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .mode-nav {
+      display: flex;
+      background: #0f111a;
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .mode-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .mode-btn.active {
+      background: var(--card-bg);
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #0f1c24;
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      margin-right: 6px;
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    /* Main Workspace */
+    .workspace {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 54px);
+      overflow: hidden;
+    }
+
+    /* Left Sidebar */
+    .sidebar {
+      width: 380px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+      padding: 16px;
+      gap: 14px;
+    }
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .form-row {
+      margin-bottom: 11px;
+    }
+    .form-row:last-child {
+      margin-bottom: 0;
+    }
+    .label-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+    .val-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-hover);
+    }
+    select, input[type="text"], input[type="range"] {
+      width: 100%;
+      background: #11141e;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+    }
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--border-focus);
+    }
+    .dropzone {
+      border: 2px dashed #333d56;
+      border-radius: var(--radius);
+      padding: 18px 12px;
+      text-align: center;
+      cursor: pointer;
+      background: #10131d;
+      transition: all 0.15s ease;
+    }
+    .dropzone:hover {
+      border-color: var(--accent);
+      background: #141824;
+    }
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 11px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-outline {
+      width: 100%;
+      background: transparent;
+      color: #cbd5e1;
+      border: 1px solid var(--border);
+      padding: 8px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn-outline:hover {
+      background: #242a3e;
+      border-color: #404b68;
+    }
+    .btn-cancel {
+      width: 100%;
+      background: rgba(239, 68, 68, 0.12);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 9px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn-cancel:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: #ef4444;
+      color: #ffffff;
+    }
+
+    /* Right Main Canvas & Proofing Area */
+    .viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+    }
+    .toolbar {
+      height: 44px;
+      background: #10131d;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+    .view-toggles {
+      display: flex;
+      gap: 6px;
+    }
+    .pill-btn {
+      background: #171c29;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .pill-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .meta-pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+    .meta-tag {
+      background: #171b28;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .gamut-tag {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    /* Stage Area */
+    .stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      padding: 24px;
+      background: radial-gradient(circle at center, #151824 0%, #090b10 100%);
+    }
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .empty-state h3 {
+      font-size: 15px;
+      color: #e2e8f0;
+      margin-bottom: 4px;
+    }
+    .empty-state p {
+      font-size: 12px;
+    }
+
+    /* Proofing Split Viewer */
+    .viewer-frame {
+      position: relative;
+      max-width: 90%;
+      max-height: 90%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      border: 1px solid #333c52;
+      border-radius: 4px;
+      overflow: hidden;
+      display: none;
+    }
+    .viewer-frame img {
+      display: block;
+      max-width: 100%;
+      max-height: 72vh;
+      object-fit: contain;
+    }
+    .split-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      overflow: hidden;
+      width: 50%;
+      border-right: 2px solid white;
+      box-shadow: 2px 0 12px rgba(0,0,0,0.7);
+      background: transparent;
+    }
+    .split-layer img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      max-width: none;
+    }
+
+    /* Status Bar */
+    .statusbar {
+      height: 26px;
+      background: #0f1119;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header>
+    <div class="brand">
+      <div class="logo-badge">G</div>
+      <h1>Canon G640 Micro-RIP</h1>
+      <span>AirPrint / URF Bypass</span>
+    </div>
+
+    <div class="mode-nav">
+      <button class="mode-btn active" id="btnModeProd" onclick="switchMode('production')">Production Print (16-bit ICC)</button>
+      <button class="mode-btn" id="btnModeTarget" onclick="switchMode('target')">Calibration Target (ArgyllCMS)</button>
+    </div>
+
+    <div>
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        <span id="printerStatus">Canon G640 Ready</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main View -->
+  <div class="workspace">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <!-- Section 1: Destination -->
+      <div class="section-card">
+        <div class="section-title">Printer & Media</div>
+        <div class="form-row">
+          <label>Printer Destination</label>
+          <select id="printerSelect"></select>
+        </div>
+        <div class="form-row">
+          <label>Transport / Spooler</label>
+          <select id="transportBackend">
+            <option value="cups_raw" selected>macOS Spooler (CUPS Raw - No Timeout, Recommended)</option>
+            <option value="direct_ipp">Direct IPP Socket (600s Timeout)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Canon Media Type</label>
+          <select id="mediaType">
+            <option value="glossy" selected>Photo Paper Plus Glossy II (mtgr)</option>
+            <option value="luster">Photo Paper Pro Luster (mtluster)</option>
+            <option value="semigloss">Photo Paper Plus Semi-gloss (mtsemisuper)</option>
+            <option value="matte">Matte Photo Paper (mtmat)</option>
+            <option value="everyday_glossy">Everyday Glossy (mtglossy)</option>
+            <option value="plain">Plain Paper (stationery)</option>
+          </select>
+        </div>
+        <div class="form-row" style="display: flex; gap: 8px;">
+          <div style="flex: 1;">
+            <label>Paper Size</label>
+            <select id="paperSize">
+              <option value="A4" selected>A4 (210 &times; 297 mm)</option>
+              <option value="4x6">4&times;6" (10 &times; 15 cm)</option>
+              <option value="5x7">5&times;7" (13 &times; 18 cm)</option>
+              <option value="A5">A5 (148 &times; 210 mm)</option>
+              <option value="Letter">Letter</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label>Quality</label>
+            <select id="quality">
+              <option value="high" selected>High (PQ5)</option>
+              <option value="normal">Normal (PQ4)</option>
+              <option value="draft">Draft (PQ3)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: LittleCMS2 Pipeline -->
+      <div class="section-card" id="colorPipelineCard">
+        <div class="section-title">Color & Linearization</div>
+        <div class="form-row">
+          <label>Paper Profile (.icc)</label>
+          <select id="profileSelect"></select>
+        </div>
+        <div class="form-row">
+          <div class="label-wrap">
+            <label>Total Ink Limit (TIL)</label>
+            <span class="val-badge" id="inkLimitBadge">90%</span>
+          </div>
+          <input type="range" id="inkLimitSlider" min="50" max="100" value="90" oninput="updateInkBadge(this.value)">
+        </div>
+        <div class="form-row" style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px;">
+          <label style="cursor: pointer;" for="paperWhiteToggle">Simulate Paper White Tint</label>
+          <input type="checkbox" id="paperWhiteToggle" checked onchange="regenerateProof()" style="width: auto;">
+        </div>
+      </div>
+
+      <!-- Section 3: File & Actions -->
+      <div class="section-card">
+        <div class="section-title">Image Input</div>
+        <div class="dropzone" id="dropArea" onclick="document.getElementById('filePicker').click()">
+          <p id="filePrompt" style="font-size: 12px; font-weight: 600;">Click or Drop Image / Target</p>
+          <p style="font-size: 10px; color: var(--text-muted); margin-top: 3px;">TIFF, PNG, JPEG (16-bit / 8-bit)</p>
+          <input type="file" id="filePicker" style="display: none;" accept="image/*" onchange="loadSelectedFile(this.files[0])">
+        </div>
+
+        <div style="margin-top: 14px;">
+          <button class="btn-primary" id="btnSubmitPrint" onclick="executePrintJob()">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print Direct via IPP
+          </button>
+          <button class="btn-cancel" id="btnCancelPrint" onclick="cancelPrintJob()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+            Cancel Print Job / Purge Queue
+          </button>
+          <button class="btn-outline" onclick="downloadRawRaster()">Export Raw URF Stream (.urf)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Viewport -->
+    <div class="viewport">
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="view-toggles">
+          <button class="pill-btn active" id="pillSplit" onclick="setViewMode('split')">Split View</button>
+          <button class="pill-btn" id="pillProof" onclick="setViewMode('proof')">Paper Proof</button>
+          <button class="pill-btn" id="pillOrig" onclick="setViewMode('orig')">Original</button>
+          <button class="pill-btn" id="pillGamut" onclick="setViewMode('gamut')">Gamut Warning</button>
+        </div>
+
+        <div class="meta-pills">
+          <span class="meta-tag" id="pixelDimsTag">0 &times; 0 px</span>
+          <span class="meta-tag" id="printSizeTag">0 &times; 0 cm @ 600 DPI</span>
+          <span class="gamut-tag" id="gamutTag">0% Out of Gamut</span>
+        </div>
+      </div>
+
+      <!-- Stage -->
+      <div class="stage" id="stageArea">
+        <div class="empty-state" id="emptyNotice">
+          <svg width="42" height="42" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom: 8px; color: #475569;"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <h3>No Document Loaded</h3>
+          <p>Drop a photo or ArgyllCMS calibration target to view proof and stream to Canon G640</p>
+        </div>
+
+        <div class="viewer-frame" id="viewerFrame">
+          <img id="baseImage" src="" alt="Proof">
+          <div class="split-layer" id="splitLayer">
+            <img id="origImage" src="" alt="Original">
+          </div>
+        </div>
+      </div>
+
+      <!-- Statusbar -->
+      <div class="statusbar">
+        <span id="logStatus">Ready. LittleCMS2 Engine initialized.</span>
+        <span>ColorSync: BYPASSED &bull; AirPrint URF 1.4</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = 'production';
+    let currentView = 'split';
+    let currentFile = null;
+    let proofData = null;
+
+    async function init() {
+      // Printers
+      try {
+        const pRes = await fetch('/api/printers');
+        const pData = await pRes.json();
+        const pSel = document.getElementById('printerSelect');
+        pSel.innerHTML = '';
+        if (pData.printers && pData.printers.length > 0) {
+          pData.printers.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.ipp_url;
+            opt.innerText = `${p.name} (${p.ip || p.host})`;
+            pSel.appendChild(opt);
+          });
+        } else {
+          const opt = document.createElement('option');
+          opt.value = 'ipp://192.168.0.41:631/ipp/print';
+          opt.innerText = 'Canon G640 (192.168.0.41:631)';
+          pSel.appendChild(opt);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
+      // Profiles
+      try {
+        const profRes = await fetch('/api/profiles');
+        const profData = await profRes.json();
+        const profSel = document.getElementById('profileSelect');
+        profSel.innerHTML = '';
+        profData.profiles.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.path;
+          opt.innerText = p.name;
+          if (p.name.toLowerCase().includes('luster') || p.name.toLowerCase().includes('canon')) {
+            opt.selected = true;
+          }
+          profSel.appendChild(opt);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById('btnModeProd').className = 'mode-btn ' + (mode === 'production' ? 'active' : '');
+      document.getElementById('btnModeTarget').className = 'mode-btn ' + (mode === 'target' ? 'active' : '');
+      document.getElementById('colorPipelineCard').style.display = (mode === 'production' ? 'block' : 'none');
+      document.getElementById('gamutTag').style.display = (mode === 'production' ? 'inline-block' : 'none');
+      if (currentFile) regenerateProof();
+    }
+
+    function updateInkBadge(val) {
+      document.getElementById('inkLimitBadge').innerText = val + '%';
+    }
+
+    function loadSelectedFile(file) {
+      if (!file) return;
+      currentFile = file;
+      document.getElementById('filePrompt').innerText = file.name;
+      regenerateProof();
+    }
+
+    async function regenerateProof() {
+      if (!currentFile) return;
+
+      if (currentMode === 'target') {
+        const reader = new FileReader();
+        reader.onload = e => {
+          document.getElementById('emptyNotice').style.display = 'none';
+          const frame = document.getElementById('viewerFrame');
+          frame.style.display = 'block';
+          document.getElementById('baseImage').src = e.target.result;
+          document.getElementById('splitLayer').style.display = 'none';
+          document.getElementById('logStatus').innerText = 'ArgyllCMS Target Loaded (1:1 Raw Passthrough)';
+        };
+        reader.readAsDataURL(currentFile);
+        return;
+      }
+
+      const profPath = document.getElementById('profileSelect').value;
+      const paperWhite = document.getElementById('paperWhiteToggle').checked;
+
+      const fd = new FormData();
+      fd.append('file', currentFile);
+      fd.append('paper_profile_path', profPath);
+      fd.append('simulate_paper_white', paperWhite);
+
+      document.getElementById('logStatus').innerText = 'Rendering LittleCMS2 Soft Proof & Paper White...';
+
+      try {
+        const res = await fetch('/api/proof', { method: 'POST', body: fd });
+        proofData = await res.json();
+        document.getElementById('logStatus').innerText = 'Soft Proof ready.';
+        applyViewerImages();
+      } catch (e) {
+        document.getElementById('logStatus').innerText = 'Soft Proof error: ' + e;
+      }
+    }
+
+    function setViewMode(mode) {
+      currentView = mode;
+      ['pillSplit', 'pillProof', 'pillOrig', 'pillGamut'].forEach(id => {
+        document.getElementById(id).className = 'pill-btn';
+      });
+      if (mode === 'split') document.getElementById('pillSplit').className = 'pill-btn active';
+      if (mode === 'proof') document.getElementById('pillProof').className = 'pill-btn active';
+      if (mode === 'orig') document.getElementById('pillOrig').className = 'pill-btn active';
+      if (mode === 'gamut') document.getElementById('pillGamut').className = 'pill-btn active';
+      applyViewerImages();
+    }
+
+    function applyViewerImages() {
+      if (!proofData) return;
+      document.getElementById('emptyNotice').style.display = 'none';
+      const frame = document.getElementById('viewerFrame');
+      frame.style.display = 'block';
+
+      const base = document.getElementById('baseImage');
+      const orig = document.getElementById('origImage');
+      const split = document.getElementById('splitLayer');
+
+      document.getElementById('gamutTag').innerText = `${proofData.out_of_gamut_percent}% Out of Gamut`;
+
+      if (currentView === 'split') {
+        base.src = proofData.proof_preview;
+        orig.src = proofData.original_preview;
+        split.style.display = 'block';
+        split.style.width = '50%';
+      } else if (currentView === 'proof') {
+        base.src = proofData.proof_preview;
+        split.style.display = 'none';
+      } else if (currentView === 'orig') {
+        base.src = proofData.original_preview;
+        split.style.display = 'none';
+      } else if (currentView === 'gamut') {
+        base.src = proofData.gamut_preview;
+        split.style.display = 'none';
+      }
+
+      base.onload = () => {
+        const w = base.naturalWidth;
+        const h = base.naturalHeight;
+        document.getElementById('pixelDimsTag').innerText = `${w} \u00d7 ${h} px`;
+        const cmW = (w / 600 * 2.54).toFixed(1);
+        const cmH = (h / 600 * 2.54).toFixed(1);
+        document.getElementById('printSizeTag').innerText = `${cmW} \u00d7 ${cmH} cm @ 600 DPI`;
+      };
+    }
+
+    // Split View Slider tracking
+    const stage = document.getElementById('stageArea');
+    stage.addEventListener('mousemove', e => {
+      if (currentView !== 'split') return;
+      const frame = document.getElementById('viewerFrame');
+      const rect = frame.getBoundingClientRect();
+      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      document.getElementById('splitLayer').style.width = (x / rect.width * 100) + '%';
+    });
+
+    async function executePrintJob() {
+      if (!currentFile) {
+        alert('Please drop or select an image to print.');
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append('file', currentFile);
+      fd.append('printer_uri', document.getElementById('printerSelect').value);
+      fd.append('mode', currentMode);
+      fd.append('paper_profile_path', document.getElementById('profileSelect').value);
+      fd.append('media_type', document.getElementById('mediaType').value);
+      fd.append('paper_size', document.getElementById('paperSize').value);
+      fd.append('quality', document.getElementById('quality').value);
+      fd.append('ink_limit', parseFloat(document.getElementById('inkLimitSlider').value) / 100.0);
+      fd.append('backend', document.getElementById('transportBackend').value);
+
+      const btn = document.getElementById('btnSubmitPrint');
+      btn.disabled = true;
+      document.getElementById('logStatus').innerText = 'Generating Apple Raster & streaming directly to Canon G640 via IPP...';
+
+      try {
+        const res = await fetch('/api/print', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('logStatus').innerText = `Print job sent successfully! Status: ${data.resp.status}`;
+          alert('Print Job sent directly to Canon G640 hardware engine!');
+        } else {
+          document.getElementById('logStatus').innerText = `Print Error: ${data.detail}`;
+          alert(`Print failed: ${data.detail}`);
+        }
+      } catch (e) {
+        document.getElementById('logStatus').innerText = 'Network error: ' + e;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function downloadRawRaster() {
+      if (!currentFile) {
+        alert('Please select an image file.');
+        return;
+      }
+      const fd = new FormData();
+      fd.append('file', currentFile);
+      fd.append('mode', currentMode);
+      fd.append('paper_profile_path', document.getElementById('profileSelect').value);
+      fd.append('media_type', document.getElementById('mediaType').value);
+      fd.append('paper_size', document.getElementById('paperSize').value);
+      fd.append('quality', document.getElementById('quality').value);
+      fd.append('ink_limit', parseFloat(document.getElementById('inkLimitSlider').value) / 100.0);
+      fd.append('backend', document.getElementById('transportBackend').value);
+
+      document.getElementById('logStatus').innerText = 'Exporting raw URF raster...';
+      const res = await fetch('/api/export-raster', { method: 'POST', body: fd });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `raw_stream_${currentFile.name}.urf`;
+        a.click();
+        document.getElementById('logStatus').innerText = 'Raw URF raster downloaded.';
+      } else {
+        alert('Failed to generate URF raster.');
+      }
+    }
+
+    async function cancelPrintJob() {
+      const pUri = document.getElementById('printerSelect').value;
+      const btn = document.getElementById('btnCancelPrint');
+      btn.disabled = true;
+      document.getElementById('logStatus').innerText = 'Cancelling print job(s) and purging queue...';
+
+      try {
+        const fd = new FormData();
+        fd.append('printer_uri', pUri);
+        const res = await fetch('/api/cancel', { method: 'POST', body: fd });
+        const data = await res.json();
+        const details = (data.details && data.details.length) ? data.details.join(' | ') : 'Purged';
+        document.getElementById('logStatus').innerText = 'Print jobs cancelled: ' + details;
+        alert('Print job cancelled successfully!\n' + details);
+      } catch (e) {
+        document.getElementById('logStatus').innerText = 'Cancel error: ' + e;
+        alert('Error cancelling job: ' + e);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Drag and drop handlers
+    const dropArea = document.getElementById('dropArea');
+    ['dragenter', 'dragover'].forEach(name => {
+      dropArea.addEventListener(name, e => { e.preventDefault(); dropArea.style.borderColor = 'var(--accent)'; });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dropArea.addEventListener(name, e => { e.preventDefault(); dropArea.style.borderColor = '#333d56'; });
+    });
+    dropArea.addEventListener('drop', e => {
+      if (e.dataTransfer.files.length) {
+        loadSelectedFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
