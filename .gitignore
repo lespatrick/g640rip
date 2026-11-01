@@ -19,6 +19,8 @@ __pycache__/
 *.pwg
 *.raw
 *.tmp
+IMG_*.tif*
+IMG_*.tiff*
 
 # Distribution / packaging
 build/
@@ -28,3 +30,4 @@ dist/
 # IDE
 .idea/
 .vscode/
+
