@@ -505,7 +505,7 @@
         <div class="section-title">Color & Linearization</div>
         <div class="form-row">
           <label>Paper Profile (.icc)</label>
-          <select id="profileSelect"></select>
+          <select id="profileSelect" onchange="regenerateProof()"></select>
         </div>
         <div class="form-row">
           <div class="label-wrap">
@@ -630,6 +630,9 @@
           }
           profSel.appendChild(opt);
         });
+        if (currentFile && currentMode === 'production') {
+          regenerateProof();
+        }
       } catch (e) {
         console.error(e);
       }
@@ -677,7 +680,13 @@
         return;
       }
 
-      const profPath = document.getElementById('profileSelect').value;
+      const profSel = document.getElementById('profileSelect');
+      const profPath = profSel.value;
+      if (!profPath) {
+        document.getElementById('logStatus').innerText = 'Please select a paper profile.';
+        return;
+      }
+      const profName = profSel.selectedOptions[0]?.text || 'selected profile';
       const paperWhite = document.getElementById('paperWhiteToggle').checked;
 
       const fd = new FormData();
@@ -685,12 +694,12 @@
       fd.append('paper_profile_path', profPath);
       fd.append('simulate_paper_white', paperWhite);
 
-      document.getElementById('logStatus').innerText = 'Rendering LittleCMS2 Soft Proof & Paper White...';
+      document.getElementById('logStatus').innerText = `Recalculating soft proof with ${profName}...`;
 
       try {
         const res = await fetch('/api/proof', { method: 'POST', body: fd });
         proofData = await res.json();
-        document.getElementById('logStatus').innerText = 'Soft Proof ready.';
+        document.getElementById('logStatus').innerText = `Soft Proof updated for ${profName} (${proofData.out_of_gamut_percent}% out of gamut).`;
         applyViewerImages();
       } catch (e) {
         document.getElementById('logStatus').innerText = 'Soft Proof error: ' + e;

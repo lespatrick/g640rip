@@ -106,6 +106,9 @@ async def post_proof(
     contents = await file.read()
     try:
         orig_img = Image.open(io.BytesIO(contents)).convert("RGB")
+        # For screen soft proof preview, cap to 1600px for real-time LittleCMS2 responsiveness
+        if orig_img.width > 1600 or orig_img.height > 1600:
+            orig_img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
 
