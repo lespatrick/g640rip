@@ -81,7 +81,13 @@ async def get_printers():
 
 @app.get("/api/profiles")
 async def get_profiles():
-    return {"profiles": list_system_icc_profiles()}
+    system_profs = list_system_icc_profiles()
+    native_opt = {
+        "name": "Native sRGB (Canon Factory ChromaLife100+ Engine)",
+        "filename": "none",
+        "path": "none",
+    }
+    return {"profiles": [native_opt] + system_profs}
 
 
 @app.get("/api/media-options")
@@ -98,11 +104,9 @@ async def post_proof(
     file: UploadFile = File(...),
     paper_profile_path: str = Form(...),
     simulate_paper_white: bool = Form(False),
+    intent: str = Form("perceptual"),
 ):
     """Generate soft proof and gamut warning preview."""
-    if not os.path.exists(paper_profile_path):
-        raise HTTPException(status_code=400, detail="Specified paper profile does not exist.")
-
     contents = await file.read()
     try:
         orig_img = Image.open(io.BytesIO(contents)).convert("RGB")
@@ -112,20 +116,35 @@ async def post_proof(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
 
-    # Generate soft proof
-    engine = SoftProofEngine(
-        paper_profile_path=paper_profile_path,
-        simulate_paper_white=simulate_paper_white,
-    )
-    proof_img = engine.render_soft_proof(orig_img)
-    gamut_img, mask = engine.render_gamut_warning(orig_img)
-    gamut_pct = round(float((mask.sum() / mask.size) * 100.0), 2)
-
     # Encode to Base64 JPEG/PNG for instant Web display
     def to_b64(img: Image.Image) -> str:
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=90)
         return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+
+    if paper_profile_path in ("none", "", None):
+        # Native sRGB mode: no proof transform needed
+        b64_orig = to_b64(orig_img)
+        return {
+            "original_preview": b64_orig,
+            "proof_preview": b64_orig,
+            "gamut_preview": b64_orig,
+            "out_of_gamut_percent": 0.0,
+        }
+
+    if not os.path.exists(paper_profile_path):
+        raise HTTPException(status_code=400, detail="Specified paper profile does not exist.")
+
+    proof_intent = INTENT_PERCEPTUAL if intent == "perceptual" else INTENT_RELATIVE_COLORIMETRIC
+
+    # Generate soft proof
+    engine = SoftProofEngine(
+        paper_profile_path=paper_profile_path,
+        simulate_paper_white=simulate_paper_white,
+    )
+    proof_img = engine.render_soft_proof(orig_img, intent=proof_intent)
+    gamut_img, mask = engine.render_gamut_warning(orig_img)
+    gamut_pct = round(float((mask.sum() / mask.size) * 100.0), 2)
 
     return {
         "original_preview": to_b64(orig_img),
@@ -147,6 +166,7 @@ async def post_export_raster(
     borderless: bool = Form(False),
     fit_mode: str = Form("fill"),
     bleed_pct: float = Form(1.5),
+    intent: str = Form("perceptual"),
 ):
     """Generate raw URF stream and return as downloadable file."""
     contents = await file.read()
@@ -156,6 +176,8 @@ async def post_export_raster(
         raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
 
     qual_val = PRINT_QUALITY_HIGH if quality == "high" else (PRINT_QUALITY_DRAFT if quality == "draft" else PRINT_QUALITY_NORMAL)
+    use_intent = INTENT_PERCEPTUAL if intent == "perceptual" else INTENT_RELATIVE_COLORIMETRIC
+    prof_path = None if paper_profile_path in ("none", "", None, "None") else paper_profile_path
 
     if mode == "target":
         engine = ColorEngine()
@@ -163,9 +185,9 @@ async def post_export_raster(
     else:
         limiter = InkLimiter(max_total_ink=ink_limit)
         engine = ColorEngine(
-            paper_profile_path=paper_profile_path,
+            paper_profile_path=prof_path,
             ink_limiter=limiter,
-            intent=INTENT_RELATIVE_COLORIMETRIC,
+            intent=use_intent,
             use_bpc=True,
         )
         processed_img = engine.process_production_image(
@@ -199,6 +221,7 @@ async def post_print(
     borderless: bool = Form(False),
     fit_mode: str = Form("fill"),
     bleed_pct: float = Form(1.5),
+    intent: str = Form("perceptual"),
 ):
     """Execute raw IPP Print-Job directly to printer."""
     contents = await file.read()
@@ -209,6 +232,8 @@ async def post_print(
 
     # Quality enum
     qual_val = PRINT_QUALITY_HIGH if quality == "high" else (PRINT_QUALITY_DRAFT if quality == "draft" else PRINT_QUALITY_NORMAL)
+    use_intent = INTENT_PERCEPTUAL if intent == "perceptual" else INTENT_RELATIVE_COLORIMETRIC
+    prof_path = None if paper_profile_path in ("none", "", None, "None") else paper_profile_path
     canon_media = CANON_MEDIA_TYPES.get(media_type.lower(), media_type)
     page_spec = PAPER_SIZES.get(paper_size, PAPER_SIZES["A4"])
 
@@ -221,9 +246,9 @@ async def post_print(
         # Production Mode
         limiter = InkLimiter(max_total_ink=ink_limit)
         engine = ColorEngine(
-            paper_profile_path=paper_profile_path,
+            paper_profile_path=prof_path,
             ink_limiter=limiter,
-            intent=INTENT_RELATIVE_COLORIMETRIC,
+            intent=use_intent,
             use_bpc=True,
         )
         processed_img = engine.process_production_image(
