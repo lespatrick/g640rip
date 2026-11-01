@@ -97,7 +97,7 @@ async def get_media_options():
 async def post_proof(
     file: UploadFile = File(...),
     paper_profile_path: str = Form(...),
-    simulate_paper_white: bool = Form(True),
+    simulate_paper_white: bool = Form(False),
 ):
     """Generate soft proof and gamut warning preview."""
     if not os.path.exists(paper_profile_path):

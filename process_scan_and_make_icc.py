@@ -17,6 +17,19 @@ from PIL import Image, ImageDraw
 from g640rip.color.ink_limit import InkLimiter
 
 
+# Bradford chromatic adaptation matrix: CIE D65 -> CIE D50
+BRADFORD_D65_TO_D50 = np.array([
+    [ 1.0478112,  0.0228866, -0.0501270],
+    [ 0.0295424,  0.9904844, -0.0170491],
+    [-0.0092345,  0.0150436,  0.7521316]
+])
+
+
+def adapt_d65_to_d50(xyz):
+    """Adapt CIE XYZ values under D65 illuminant to CIE D50 using Bradford transform."""
+    return np.dot(BRADFORD_D65_TO_D50, xyz)
+
+
 def srgb_to_xyz(rgb):
     """Convert sRGB [0..255] to CIE XYZ (D50 Bradford adapted) [0..100]."""
     rgb = np.array(rgb, dtype=float) / 255.0
@@ -220,8 +233,9 @@ def main():
 
             # Blend color correction in Lab space
             if strength < 1.0:
-                xyz_exp = np.array([exp_x, exp_y, exp_z])
-                lab_exp = xyz_to_lab(xyz_exp)
+                xyz_exp_d65 = np.array([exp_x, exp_y, exp_z])
+                xyz_exp_d50 = adapt_d65_to_d50(xyz_exp_d65)
+                lab_exp = xyz_to_lab(xyz_exp_d50)
                 # Linear blend between expected target Lab and scanned measured Lab
                 lab_blended = (1.0 - strength) * lab_exp + strength * lab_meas
                 xyz_final = lab_to_xyz(lab_blended)

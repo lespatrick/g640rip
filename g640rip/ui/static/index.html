@@ -493,8 +493,8 @@
           <input type="range" id="inkLimitSlider" min="50" max="100" value="90" oninput="updateInkBadge(this.value)">
         </div>
         <div class="form-row" style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px;">
-          <label style="cursor: pointer;" for="paperWhiteToggle">Simulate Paper White Tint</label>
-          <input type="checkbox" id="paperWhiteToggle" checked onchange="regenerateProof()" style="width: auto;">
+          <label style="cursor: pointer;" for="paperWhiteToggle" title="Simulate exact paper white base tint (Absolute Colorimetric). Keep unchecked for standard Relative Colorimetric + BPC photo proofing.">Simulate Paper White Tint</label>
+          <input type="checkbox" id="paperWhiteToggle" onchange="regenerateProof()" style="width: auto;">
         </div>
       </div>
 

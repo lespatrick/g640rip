@@ -46,20 +46,26 @@ class SoftProofEngine:
         self,
         paper_profile_path: str,
         display_profile_path: Optional[str] = None,
-        simulate_paper_white: bool = True,
+        display_profile: Optional[LCMS2Profile] = None,
+        simulate_paper_white: bool = False,
         simulate_black_ink: bool = True,
+        use_system_display: bool = False,
     ):
         self.paper_profile_path = paper_profile_path
         self.paper_profile = LCMS2Profile.open_file(paper_profile_path)
 
-        if display_profile_path and os.path.exists(display_profile_path):
+        if display_profile is not None:
+            self.display_profile = display_profile
+        elif display_profile_path and os.path.exists(display_profile_path):
             self.display_profile = LCMS2Profile.open_file(display_profile_path)
-        else:
+        elif use_system_display:
             sys_disp = get_display_profile_path()
             if sys_disp and os.path.exists(sys_disp):
                 self.display_profile = LCMS2Profile.open_file(sys_disp)
             else:
                 self.display_profile = LCMS2Profile.create_srgb()
+        else:
+            self.display_profile = LCMS2Profile.create_srgb()
 
         self.simulate_paper_white = simulate_paper_white
         self.simulate_black_ink = simulate_black_ink
