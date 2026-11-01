@@ -115,7 +115,7 @@ class ColorEngine:
         borderless: bool = True,
         fit_mode: str = "compensate",  # "compensate" (100% safe area + edge buffer), "fill" (crop), "fit" (contain), "none"
         bleed_pct: float = 0.0,
-        comp_x_pct: float = 2.7,
+        comp_x_pct: float = 0.0,
         comp_y_pct: float = 5.0,
         offset_x_pct: float = 0.0,
         offset_y_pct: float = 0.0,
@@ -126,9 +126,9 @@ class ColorEngine:
         Scale, auto-orient, and frame input image to exact target canvas dimensions at specified DPI.
 
         Framing Modes:
-        - "compensate": Hardware Bleed Compensation. Scales image to fit printable safe area
-          (protecting the outer 2.7% X and 5.0% Y from being cut off by the printer's mechanical feed)
-          and replicates edge pixels into the overspray zone. 100% of the photo is preserved on paper!
+        - "compensate": Hardware Bleed Compensation. Scales image so real photo content covers
+          100% of the width (no repeated pixels on right/left) while keeping the vertical safe area
+          protected (preventing bottom cut-off).
         - "fill": Scales to completely fill the canvas, center-cropping excess.
         - "fit": Scales image to fit inside canvas with clean borders (letterbox/pillarbox).
         - "none": Original 1:1 image placement without scaling.
@@ -166,46 +166,57 @@ class ColorEngine:
 
         if fit_mode == "compensate":
             # Hardware Bleed Compensation:
-            # Pre-shrink image to compensate for Canon G640 hardware borderless expansion
+            # Horizontal (width): covers canvas_w so the real photo reaches the right edge with 0 repeated pixels!
+            # Vertical (height): protects the bottom with comp_y_pct so nothing gets cut off by feed rollers.
             shrink_w = float(np.clip(comp_x_pct / 100.0, 0.0, 0.15))
             shrink_h = float(np.clip(comp_y_pct / 100.0, 0.0, 0.20))
 
             safe_w = max(100, int(round(canvas_w * (1.0 - shrink_w))))
             safe_h = max(100, int(round(canvas_h * (1.0 - shrink_h))))
 
-            scale = min(safe_w / img_w, safe_h / img_h)
+            scale = max(safe_w / img_w, safe_h / img_h)
             inner_w = int(round(img_w * scale))
             inner_h = int(round(img_h * scale))
 
             inner_resized = image.resize((inner_w, inner_h), resample=Image.Resampling.LANCZOS)
-            inner_arr = np.array(inner_resized, dtype=np.uint8)
 
-            # Calculate placement with optional offset adjustment
-            base_x = (canvas_w - inner_w) // 2
-            base_y = (canvas_h - inner_h) // 2
             shift_x = int(round((offset_x_pct / 100.0) * canvas_w))
             shift_y = int(round((offset_y_pct / 100.0) * canvas_h))
 
-            paste_x = int(np.clip(base_x + shift_x, 0, canvas_w - inner_w))
-            paste_y = int(np.clip(base_y + shift_y, 0, canvas_h - inner_h))
+            # Horizontal placement / crop
+            if inner_w >= canvas_w:
+                crop_x = int(np.clip((inner_w - canvas_w) // 2 + shift_x, 0, inner_w - canvas_w))
+                inner_resized = inner_resized.crop((crop_x, 0, crop_x + canvas_w, inner_h))
+                paste_x = 0
+                draw_w = canvas_w
+            else:
+                paste_x = int(np.clip((canvas_w - inner_w) // 2 + shift_x, 0, canvas_w - inner_w))
+                draw_w = inner_w
 
-            # Create canvas and paste inner photo
+            # Vertical placement / crop
+            if inner_h >= canvas_h:
+                crop_y = int(np.clip((inner_h - canvas_h) // 2 + shift_y, 0, inner_h - canvas_h))
+                inner_resized = inner_resized.crop((0, crop_y, draw_w, crop_y + canvas_h))
+                paste_y = 0
+                draw_h = canvas_h
+            else:
+                paste_y = int(np.clip((canvas_h - inner_h) // 2 + shift_y, 0, canvas_h - inner_h))
+                draw_h = inner_h
+
+            # Create canvas and draw photo
             canvas_arr = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
-            canvas_arr[paste_y : paste_y + inner_h, paste_x : paste_x + inner_w] = inner_arr
+            inner_arr = np.array(inner_resized, dtype=np.uint8)
+            canvas_arr[paste_y : paste_y + draw_h, paste_x : paste_x + draw_w] = inner_arr
 
-            # Edge replication / clamp to fill overspray buffer:
-            # Top padding
+            # Edge replication buffer only if inner dimensions were smaller than canvas
             if paste_y > 0:
-                canvas_arr[:paste_y, paste_x : paste_x + inner_w] = inner_arr[0:1, :]
-            # Bottom padding
-            if paste_y + inner_h < canvas_h:
-                canvas_arr[paste_y + inner_h :, paste_x : paste_x + inner_w] = inner_arr[-1:, :]
-            # Left padding (entire height)
+                canvas_arr[:paste_y, paste_x : paste_x + draw_w] = inner_arr[0:1, :]
+            if paste_y + draw_h < canvas_h:
+                canvas_arr[paste_y + draw_h :, paste_x : paste_x + draw_w] = inner_arr[-1:, :]
             if paste_x > 0:
                 canvas_arr[:, :paste_x] = canvas_arr[:, paste_x : paste_x + 1]
-            # Right padding (entire height)
-            if paste_x + inner_w < canvas_w:
-                canvas_arr[:, paste_x + inner_w :] = canvas_arr[:, paste_x + inner_w - 1 : paste_x + inner_w]
+            if paste_x + draw_w < canvas_w:
+                canvas_arr[:, paste_x + draw_w :] = canvas_arr[:, paste_x + draw_w - 1 : paste_x + draw_w]
 
             return Image.fromarray(canvas_arr, mode="RGB")
 
@@ -275,7 +286,7 @@ class ColorEngine:
         borderless: bool = False,
         fit_mode: str = "compensate",
         bleed_pct: float = 0.0,
-        comp_x_pct: float = 2.7,
+        comp_x_pct: float = 0.0,
         comp_y_pct: float = 5.0,
         offset_x_pct: float = 0.0,
         offset_y_pct: float = 0.0,

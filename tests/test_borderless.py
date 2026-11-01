@@ -72,7 +72,7 @@ class TestBorderless(unittest.TestCase):
             page_size_name="10x15",
             borderless=True,
             fit_mode="compensate",
-            comp_x_pct=2.7,
+            comp_x_pct=0.0,
             comp_y_pct=5.0,
             auto_rotate=True,
             dpi=600,
@@ -81,7 +81,7 @@ class TestBorderless(unittest.TestCase):
         arr = np.array(framed)
         # Center has image content
         self.assertEqual(list(arr[1760, 1181]), [50, 100, 150])
-        # Edges are clamped/replicated, no white borders (0xFF)
+        # Right edge has authentic image content, no white borders (0xFF)
         self.assertEqual(list(arr[0, 0]), [50, 100, 150])
         self.assertEqual(list(arr[3519, 2361]), [50, 100, 150])
 
