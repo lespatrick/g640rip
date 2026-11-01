@@ -500,17 +500,10 @@
             </select>
           </div>
         </div>
-        <div class="form-row" id="compensationRow" style="display: flex; gap: 8px;">
-          <div style="flex: 1;">
+        <div class="form-row" id="compensationRow">
+          <div>
             <div class="label-wrap">
-              <label title="Compensate horizontal borderless crop">Compensate X (Right)</label>
-              <span class="val-badge" id="compXBadge">0.0%</span>
-            </div>
-            <input type="range" id="compXSlider" min="0" max="8" step="0.1" value="0.0" oninput="updateCompXBadge(this.value)">
-          </div>
-          <div style="flex: 1;">
-            <div class="label-wrap">
-              <label title="Compensate vertical borderless crop">Compensate Y (Bottom)</label>
+              <label title="Compensate vertical borderless crop: keeps 100% of photo bottom by padding only the mechanical feed roller cut-off zone">Compensate Bottom (Feed Roller Safe Margin)</label>
               <span class="val-badge" id="compYBadge">5.0%</span>
             </div>
             <input type="range" id="compYSlider" min="0" max="10" step="0.1" value="5.0" oninput="updateCompYBadge(this.value)">
@@ -842,7 +835,7 @@
       fd.append('borderless', document.getElementById('borderlessToggle').checked);
       fd.append('fit_mode', document.getElementById('fitMode').value);
       fd.append('bleed_pct', parseFloat(document.getElementById('bleedExpansion').value));
-      fd.append('comp_x_pct', parseFloat(document.getElementById('compXSlider').value));
+      fd.append('comp_x_pct', 0.0);
       fd.append('comp_y_pct', parseFloat(document.getElementById('compYSlider').value));
       fd.append('offset_x_pct', 0.0);
       fd.append('offset_y_pct', 0.0);
@@ -887,7 +880,7 @@
       fd.append('borderless', document.getElementById('borderlessToggle').checked);
       fd.append('fit_mode', document.getElementById('fitMode').value);
       fd.append('bleed_pct', parseFloat(document.getElementById('bleedExpansion').value));
-      fd.append('comp_x_pct', parseFloat(document.getElementById('compXSlider').value));
+      fd.append('comp_x_pct', 0.0);
       fd.append('comp_y_pct', parseFloat(document.getElementById('compYSlider').value));
       fd.append('offset_x_pct', 0.0);
       fd.append('offset_y_pct', 0.0);
