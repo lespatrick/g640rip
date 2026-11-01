@@ -2,13 +2,19 @@
 """
 Process flatbed scanned calibration chart (IMG_20261101_0001.tif)
 and generate an ICC profile using ArgyllCMS colprof.
+
+Supports configurable ink limiting (e.g. 70% or 100%).
 """
 
 import os
 import sys
+import argparse
 import subprocess
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
+
+from g640rip.color.ink_limit import InkLimiter
+
 
 def srgb_to_xyz(rgb):
     """Convert sRGB [0..255] to CIE XYZ (D50 Bradford adapted) [0..100]."""
@@ -26,6 +32,7 @@ def srgb_to_xyz(rgb):
     ])
     xyz = np.dot(M, lin) * 100.0
     return xyz
+
 
 def xyz_to_lab(xyz):
     """Convert CIE XYZ (D50) to CIE L*a*b* (D50)."""
@@ -47,13 +54,30 @@ def xyz_to_lab(xyz):
     b = 200.0 * (fy - fz)
     return np.array([L, a, b])
 
+
 def main():
-    scan_file = "IMG_20261101_0001.tif"
-    ti2_file = "targets/G640_10x15_80p_i1.ti2"
-    base_name = "Canon_G640_10x15_Glossy2"
+    parser = argparse.ArgumentParser(description="Process scanned target chart and create ICC profile.")
+    parser.add_argument("--scan", default="IMG_20261101_0001.tif", help="Scanned chart TIFF image")
+    parser.add_argument("--ti2", default="targets/G640_10x15_80p_i1.ti2", help="Target definition file")
+    parser.add_argument("--ink-limit", type=float, default=1.0, help="Ink limit fraction [0.5..1.0] (default: 1.0 = no limit, 0.70 = 70%% ink limit)")
+    parser.add_argument("--name", default=None, help="Custom base name for output profile")
+    args = parser.parse_args()
+
+    scan_file = args.scan
+    ti2_file = args.ti2
+    
+    limit_pct = int(round(args.ink_limit * 100))
+    if args.name:
+        base_name = args.name
+    elif limit_pct < 100:
+        base_name = f"Canon_G640_10x15_Glossy2_{limit_pct}pct"
+    else:
+        base_name = "Canon_G640_10x15_Glossy2"
+
     ti3_file = f"targets/{base_name}.ti3"
     icc_file = f"targets/{base_name}.icc"
-    
+    desc_str = f"Canon G640 10x15 Photo Paper Plus Glossy II" + (f" ({limit_pct}% Ink Limit)" if limit_pct < 100 else "")
+
     if not os.path.exists(scan_file):
         print(f"Error: Scan file {scan_file} not found!")
         sys.exit(1)
@@ -61,6 +85,7 @@ def main():
         print(f"Error: Target definition {ti2_file} not found!")
         sys.exit(1)
 
+    print(f"=== Canon G640 Target Scanner & ICC Builder (Ink Limit: {limit_pct}%) ===")
     print(f"1. Loading scanned chart: {scan_file}...")
     scan_img = Image.open(scan_file)
     print(f"   Raw dimensions: {scan_img.size}, mode: {scan_img.mode}")
@@ -88,7 +113,7 @@ def main():
             loc = f"{strip_names[c_idx]}{r_idx+1}"
             box = arr_s[cy-sample_r:cy+sample_r, cx-sample_r:cx+sample_r]
             
-            # Trimmed mean: discard lowest 5% and highest 5% along each channel to filter scanner dust/scratches
+            # Trimmed mean: discard lowest 5% and highest 5% along each channel
             pixels = box.reshape(-1, 3)
             rgb_mean = np.zeros(3)
             for ch in range(3):
@@ -106,11 +131,9 @@ def main():
                 "cy": cy,
             }
 
-            # Draw green bounding box on verification image
             draw.rectangle([cx-sample_r, cy-sample_r, cx+sample_r, cy+sample_r], outline=(0, 255, 0), width=3)
             draw.text((cx-sample_r+2, cy-sample_r+2), loc, fill=(0, 255, 0))
 
-    # Save verification thumbnail
     vis_out = "targets/scan_patches_verification.jpg"
     vis_img.thumbnail((1200, 1800))
     vis_img.save(vis_out, quality=85)
@@ -137,11 +160,18 @@ def main():
 
     print(f"   Matched {len(ti2_records)} target definitions with measured patches.")
 
+    # Apply Ink Limiting if specified
+    limiter = None
+    if args.ink_limit < 1.0:
+        knee = max(0.40, args.ink_limit - 0.10)
+        limiter = InkLimiter(max_total_ink=args.ink_limit, soft_knee=knee)
+        print(f"   Applied Ink Limiter to target RGB: Max={limit_pct}%, Knee={int(knee*100)}%")
+
     # Generate Argyll TI3 file
     print(f"5. Writing Argyll CGATS .ti3 file: {ti3_file}...")
     with open(ti3_file, "w") as f:
         f.write("CTI3\n\n")
-        f.write(f'DESCRIPTOR "Canon G640 10x15 Photo Paper Plus Glossy II Profile Data"\n')
+        f.write(f'DESCRIPTOR "{desc_str}"\n')
         f.write('ORIGINATOR "g640RIP Target Scanner Engine"\n')
         f.write('CREATED "Sun Nov  1 2026"\n')
         f.write('KEYWORD "DEVICE_CLASS"\n')
@@ -161,7 +191,17 @@ def main():
                 print(f"Error: Missing measurement for patch {loc}!")
                 sys.exit(1)
             xyz = meas["xyz"]
-            f.write(f"{sid:3d} {r:9.4f} {g:9.4f} {b:9.4f} {xyz[0]:9.4f} {xyz[1]:9.4f} {xyz[2]:9.4f}\n")
+
+            # If ink limited, transform RGB sent to device
+            r_dev, g_dev, b_dev = r, g, b
+            if limiter is not None:
+                rgb_arr = np.array([[[int(round(r * 2.55)), int(round(g * 2.55)), int(round(b * 2.55))]]], dtype=np.uint8)
+                rgb_lim = limiter.apply_rgb(rgb_arr)
+                r_dev = float(rgb_lim[0, 0, 0]) / 2.55
+                g_dev = float(rgb_lim[0, 0, 1]) / 2.55
+                b_dev = float(rgb_lim[0, 0, 2]) / 2.55
+
+            f.write(f"{sid:3d} {r_dev:9.4f} {g_dev:9.4f} {b_dev:9.4f} {xyz[0]:9.4f} {xyz[1]:9.4f} {xyz[2]:9.4f}\n")
         
         f.write('END_DATA\n')
 
@@ -170,11 +210,12 @@ def main():
     colprof_cmd = [
         "colprof",
         "-v",
-        "-D", "Canon G640 10x15 Photo Paper Plus Glossy II",
+        "-D", desc_str,
         "-qm",     # Medium quality cLUT
-        "-al",     # Lab cLUT algorithm (standard for printer output profiles)
+        "-al",     # Lab cLUT algorithm
         "-cmt",    # Monitor in typical environment
         "-dpp",    # Practical reflection print
+        "-O", icc_file,
         f"targets/{base_name}"
     ]
     print(f"   Command: {' '.join(colprof_cmd)}")
@@ -194,6 +235,7 @@ def main():
     else:
         print(f"Error: Expected output ICC file {icc_file} was not created!")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
