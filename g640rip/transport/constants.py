@@ -86,11 +86,120 @@ CANON_MEDIA_TYPES = {
 
 # Standard Page Dimensions in Points (72 dpi) and at 600 DPI
 PAPER_SIZES = {
-    "A4": {"width_mm": 210, "height_mm": 297, "width_600dpi": 4960, "height_600dpi": 7016, "media_name": "A4", "ipp_media": "iso_a4_210x297mm"},
-    "4x6": {"width_mm": 101.6, "height_mm": 152.4, "width_600dpi": 2400, "height_600dpi": 3600, "media_name": "4x6", "ipp_media": "na_index-4x6_4x6in"},
-    "10x15": {"width_mm": 101.6, "height_mm": 152.4, "width_600dpi": 2400, "height_600dpi": 3600, "media_name": "4x6", "ipp_media": "na_index-4x6_4x6in"},
-    "5x7": {"width_mm": 127, "height_mm": 177.8, "width_600dpi": 3000, "height_600dpi": 4200, "media_name": "5x7", "ipp_media": "na_5x7_5x7in"},
-    "A5": {"width_mm": 148, "height_mm": 210, "width_600dpi": 3496, "height_600dpi": 4960, "media_name": "A5", "ipp_media": "iso_a5_148x210mm"},
-    "Letter": {"width_mm": 215.9, "height_mm": 279.4, "width_600dpi": 5100, "height_600dpi": 6600, "media_name": "Letter", "ipp_media": "na_letter_8.5x11in"},
+    "A4": {
+        "width_mm": 210,
+        "height_mm": 297,
+        "width_600dpi": 4960,
+        "height_600dpi": 7016,
+        "media_name": "A4",
+        "media_fullbleed": "A4.Fullbleed",
+        "ipp_media": "iso_a4_210x297mm",
+        "supports_borderless": True,
+    },
+    "4x6": {
+        "width_mm": 101.6,
+        "height_mm": 152.4,
+        "width_600dpi": 2400,
+        "height_600dpi": 3600,
+        "media_name": "4x6",
+        "media_fullbleed": "4x6.Fullbleed",
+        "ipp_media": "na_index-4x6_4x6in",
+        "supports_borderless": True,
+    },
+    "10x15": {
+        "width_mm": 101.6,
+        "height_mm": 152.4,
+        "width_600dpi": 2400,
+        "height_600dpi": 3600,
+        "media_name": "4x6",
+        "media_fullbleed": "4x6.Fullbleed",
+        "ipp_media": "na_index-4x6_4x6in",
+        "supports_borderless": True,
+    },
+    "5x7": {
+        "width_mm": 127,
+        "height_mm": 177.8,
+        "width_600dpi": 3000,
+        "height_600dpi": 4200,
+        "media_name": "5x7",
+        "media_fullbleed": "5x7.Fullbleed",
+        "ipp_media": "na_5x7_5x7in",
+        "supports_borderless": True,
+    },
+    "3.5x5": {
+        "width_mm": 88.9,
+        "height_mm": 127.0,
+        "width_600dpi": 2100,
+        "height_600dpi": 3000,
+        "media_name": "3.5x5",
+        "media_fullbleed": "3.5x5.Fullbleed",
+        "ipp_media": "oe_photo-l_3.5x5in",
+        "supports_borderless": True,
+    },
+    "Letter": {
+        "width_mm": 215.9,
+        "height_mm": 279.4,
+        "width_600dpi": 5100,
+        "height_600dpi": 6600,
+        "media_name": "Letter",
+        "media_fullbleed": "Letter.Fullbleed",
+        "ipp_media": "na_letter_8.5x11in",
+        "supports_borderless": True,
+    },
+    "8x10": {
+        "width_mm": 203.2,
+        "height_mm": 254.0,
+        "width_600dpi": 4800,
+        "height_600dpi": 6000,
+        "media_name": "8x10",
+        "media_fullbleed": "8x10.Fullbleed",
+        "ipp_media": "na_govt-letter_8x10in",
+        "supports_borderless": True,
+    },
+    "5x5": {
+        "width_mm": 127.0,
+        "height_mm": 127.0,
+        "width_600dpi": 3000,
+        "height_600dpi": 3000,
+        "media_name": "5x5",
+        "media_fullbleed": "5x5.Fullbleed",
+        "ipp_media": "om_square-photo_127x127mm",
+        "supports_borderless": True,
+    },
+    "Postcard": {
+        "width_mm": 100.0,
+        "height_mm": 148.0,
+        "width_600dpi": 2362,
+        "height_600dpi": 3496,
+        "media_name": "Postcard",
+        "media_fullbleed": "Postcard.Fullbleed",
+        "ipp_media": "jpn_hagaki_100x148mm",
+        "supports_borderless": True,
+    },
+    "A5": {
+        "width_mm": 148,
+        "height_mm": 210,
+        "width_600dpi": 3496,
+        "height_600dpi": 4960,
+        "media_name": "A5",
+        "media_fullbleed": "A5",
+        "ipp_media": "iso_a5_148x210mm",
+        "supports_borderless": False,
+    },
 }
+
+
+def get_paper_spec(size_name: str) -> dict:
+    """Retrieve paper specifications matching name or alias."""
+    if not size_name:
+        return PAPER_SIZES["4x6"]
+    key = size_name.strip()
+    for k, v in PAPER_SIZES.items():
+        if k.lower() == key.lower():
+            return v
+    if any(x in key.lower() for x in ("4x6", "10x15", "small-photo")):
+        return PAPER_SIZES["4x6"]
+    if "a4" in key.lower():
+        return PAPER_SIZES["A4"]
+    return PAPER_SIZES.get(key, PAPER_SIZES["4x6"])
 

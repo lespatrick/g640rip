@@ -37,6 +37,7 @@ from .constants import (
     TAG_UNKNOWN,
     TAG_UNSUPPORTED,
     TAG_URI,
+    get_paper_spec,
 )
 
 
@@ -292,6 +293,7 @@ class IPPClient:
         print_quality: int = PRINT_QUALITY_HIGH,
         copies: int = 1,
         backend: str = "cups_raw",  # "cups_raw" (recommended) or "direct_ipp"
+        borderless: bool = False,
     ) -> Dict[str, Any]:
         """
         Send raw Print-Job operation directly with raster stream (image/urf).
@@ -302,6 +304,15 @@ class IPPClient:
         - Handles hardware printer backpressure and flow control.
         - Completely bypasses ColorSync and PPD filters.
         """
+        # Determine exact CUPS PageSize/media name
+        cups_media = "4x6"
+        if media:
+            spec = get_paper_spec(media)
+            if borderless and spec.get("supports_borderless", True):
+                cups_media = spec.get("media_fullbleed", f"{spec['media_name']}.Fullbleed")
+            else:
+                cups_media = spec["media_name"]
+
         # Option A: CUPS Raw Queue (Recommended for long photo prints)
         if backend in ("cups_raw", "auto") and self.cups_queue:
             try:
@@ -310,10 +321,8 @@ class IPPClient:
                     tmp_path = tmp.name
 
                 cmd = ["lp", "-d", self.cups_queue, "-o", "raw", "-t", job_name]
-                if media:
-                    cups_media = "4x6" if any(x in media.lower() for x in ("4x6", "10x15", "small-photo")) else ("A4" if "a4" in media.lower() else media)
-                    cmd.extend(["-o", f"media={cups_media}"])
-                    cmd.extend(["-o", f"PageSize={cups_media}"])
+                cmd.extend(["-o", f"media={cups_media}"])
+                cmd.extend(["-o", f"PageSize={cups_media}"])
                 if media_type:
                     cmd.extend(["-o", f"MediaType={media_type}"])
                 cmd.append(tmp_path)
@@ -324,7 +333,7 @@ class IPPClient:
                     "status": "OK",
                     "backend": f"CUPS-Raw ({self.cups_queue})",
                     "output": out.strip(),
-                    "note": "Delivered via macOS Background Spooler (Raw URF, ColorSync Bypassed, Zero Timeout Risk)",
+                    "note": f"Delivered via macOS Background Spooler (Raw URF, ColorSync Bypassed, Borderless={borderless})",
                 }
             except Exception as cups_err:
                 if backend == "cups_raw":
@@ -342,7 +351,13 @@ class IPPClient:
             if copies > 1:
                 msg.add_job_attr(TAG_INTEGER, "copies", copies)
             if media:
-                msg.add_job_attr(TAG_KEYWORD, "media", media)
+                spec = get_paper_spec(media)
+                msg.add_job_attr(TAG_KEYWORD, "media", spec["ipp_media"])
+            if borderless:
+                msg.add_job_attr(TAG_INTEGER, "media-top-margin", 0)
+                msg.add_job_attr(TAG_INTEGER, "media-bottom-margin", 0)
+                msg.add_job_attr(TAG_INTEGER, "media-left-margin", 0)
+                msg.add_job_attr(TAG_INTEGER, "media-right-margin", 0)
             if media_type:
                 msg.add_job_attr(TAG_KEYWORD, "media-type", media_type)
             if print_quality:
@@ -367,10 +382,8 @@ class IPPClient:
                         tmp_path = tmp.name
 
                     cmd = ["lp", "-d", self.cups_queue, "-o", "raw", "-t", job_name]
-                    if media:
-                        cups_media = "4x6" if any(x in media.lower() for x in ("4x6", "10x15", "small-photo")) else ("A4" if "a4" in media.lower() else media)
-                        cmd.extend(["-o", f"media={cups_media}"])
-                        cmd.extend(["-o", f"PageSize={cups_media}"])
+                    cmd.extend(["-o", f"media={cups_media}"])
+                    cmd.extend(["-o", f"PageSize={cups_media}"])
                     if media_type:
                         cmd.extend(["-o", f"MediaType={media_type}"])
                     cmd.append(tmp_path)
@@ -380,7 +393,7 @@ class IPPClient:
                         "status": "OK",
                         "backend": f"CUPS-Raw-Fallback ({self.cups_queue})",
                         "output": out.strip(),
-                        "note": "Delivered via CUPS Raw Spooler after direct IPP timeout (ColorSync Bypassed)",
+                        "note": f"Delivered via CUPS Raw Spooler after direct IPP timeout (Borderless={borderless})",
                     }
                 except Exception as cups_err:
                     raise RuntimeError(f"Direct IPP timed out ({direct_err}) and CUPS fallback failed ({cups_err})")

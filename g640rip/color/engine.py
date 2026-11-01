@@ -22,7 +22,7 @@ from .lcms2_capi import (
     cmsFLAGS_HIGHRESPRECALC,
 )
 from .linearization import LinearizationLUT
-from ..transport.constants import PAPER_SIZES
+from ..transport.constants import PAPER_SIZES, get_paper_spec
 
 
 class ColorEngine:
@@ -106,19 +106,116 @@ class ColorEngine:
     # -------------------------------------------------------------
     # 2. Production Mode (16-bit ICC + Linearization + Ink Limit)
     # -------------------------------------------------------------
+    @staticmethod
+    def prepare_image_layout(
+        image: Image.Image,
+        page_size_name: str = "4x6",
+        borderless: bool = True,
+        fit_mode: str = "fill",  # "fill" (crop to edge), "fit" (contain), or "none" (original)
+        bleed_pct: float = 1.5,  # 1.5% overspray for borderless to absorb mechanical paper feed tolerance
+        auto_rotate: bool = True,
+        dpi: int = 600,
+    ) -> Image.Image:
+        """
+        Scale, auto-orient, and frame input image to exact target canvas dimensions at specified DPI.
+
+        For borderless:
+        - Canvas size exactly matches paper physical dimensions at 600 DPI (e.g. 2400x3600 for 4x6").
+        - If fit_mode == "fill": Image fills 100% of the canvas with optional slight bleed/overspray
+          so no white slivers appear on mechanical paper feed.
+        - If fit_mode == "fit": Image is scaled to fit within canvas with clean white margins.
+        """
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        spec = get_paper_spec(page_size_name)
+        canvas_w = spec.get("width_600dpi", 2400)
+        canvas_h = spec.get("height_600dpi", 3600)
+        if dpi != 600:
+            scale_factor = dpi / 600.0
+            canvas_w = int(round(canvas_w * scale_factor))
+            canvas_h = int(round(canvas_h * scale_factor))
+
+        img_w, img_h = image.size
+
+        if fit_mode == "none":
+            if img_w == canvas_w and img_h == canvas_h:
+                return image
+            canvas = Image.new("RGB", (canvas_w, canvas_h), (255, 255, 255))
+            paste_x = max(0, (canvas_w - img_w) // 2)
+            paste_y = max(0, (canvas_h - img_h) // 2)
+            canvas.paste(image, (paste_x, paste_y))
+            return canvas
+
+        # Auto-rotate to match paper orientation (Canon G640 feeds short edge first)
+        if auto_rotate:
+            is_canvas_portrait = canvas_h >= canvas_w
+            is_img_portrait = img_h >= img_w
+            if is_canvas_portrait != is_img_portrait:
+                # Rotate 90 degrees clockwise to match canvas orientation
+                image = image.rotate(-90, expand=True)
+                img_w, img_h = image.size
+
+        if fit_mode == "fill":
+            # Scale to completely fill canvas (crop excess)
+            overspray = (bleed_pct / 100.0) if (borderless and bleed_pct > 0) else 0.0
+            target_w = int(round(canvas_w * (1.0 + overspray)))
+            target_h = int(round(canvas_h * (1.0 + overspray)))
+
+            scale = max(target_w / img_w, target_h / img_h)
+            new_w = int(round(img_w * scale))
+            new_h = int(round(img_h * scale))
+
+            resized = image.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
+            # Center crop to exact canvas_w x canvas_h
+            crop_x = (new_w - canvas_w) // 2
+            crop_y = (new_h - canvas_h) // 2
+            framed = resized.crop((crop_x, crop_y, crop_x + canvas_w, crop_y + canvas_h))
+            return framed
+
+        elif fit_mode == "fit":
+            # Scale to fit inside canvas (no cropping, letterbox/pillarbox)
+            scale = min(canvas_w / img_w, canvas_h / img_h)
+            new_w = int(round(img_w * scale))
+            new_h = int(round(img_h * scale))
+
+            resized = image.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
+            canvas = Image.new("RGB", (canvas_w, canvas_h), (255, 255, 255))
+            paste_x = (canvas_w - new_w) // 2
+            paste_y = (canvas_h - new_h) // 2
+            canvas.paste(resized, (paste_x, paste_y))
+            return canvas
+
+        return image
+
     def process_production_image(
         self,
         image: Image.Image,
+        page_size_name: Optional[str] = None,
+        borderless: bool = False,
+        fit_mode: str = "fill",
+        bleed_pct: float = 1.5,
         input_profile_override: Optional[LCMS2Profile] = None,
     ) -> Image.Image:
         """
         Mode 2: Production Mode.
         Full 16-bit precision color pipeline:
-        1. Input ICC -> Output Paper ICC transform (RelCol + BPC)
-        2. 1D Channel Linearization LUT application
-        3. Total Ink Limit (TIL) saturation limiting
-        4. Quantization to 8-bit RGB for URF streaming
+        1. Optional high-quality Lanczos scaling & framing for target paper size (borderless / bordered)
+        2. Input ICC -> Output Paper ICC transform (RelCol + BPC)
+        3. 1D Channel Linearization LUT application
+        4. Total Ink Limit (TIL) saturation limiting
+        5. Quantization to 8-bit RGB for URF streaming
         """
+        # Step 0: Layout & framing if page_size_name is requested
+        if page_size_name is not None:
+            image = self.prepare_image_layout(
+                image,
+                page_size_name=page_size_name,
+                borderless=borderless,
+                fit_mode=fit_mode,
+                bleed_pct=bleed_pct,
+            )
+
         # Step 1: Prepare 16-bit RGB buffer
         if image.mode != "RGB":
             image = image.convert("RGB")
