@@ -183,13 +183,14 @@ def cmd_print(args):
         use_bpc=not args.no_bpc,
     )
 
-    console.print(f"[cyan]Executing 16-bit color transform & layout (size={args.size}, borderless={args.borderless}, fit={args.fit_mode})...[/cyan]")
+    console.print(f"[cyan]Executing 16-bit color transform & layout (size={args.size}, borderless={args.borderless}, fit={args.fit_mode}, contrast={args.contrast:+.2f})...[/cyan]")
     processed_img = engine.process_production_image(
         img,
         page_size_name=args.size,
         borderless=args.borderless,
         fit_mode=args.fit_mode,
         bleed_pct=args.bleed,
+        contrast=args.contrast,
     )
 
     console.print("[cyan]Encoding Apple Raster (image/urf v1.4, 600 DPI)...[/cyan]")
@@ -331,7 +332,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_prnt.add_argument("--profile", required=True, help="Custom paper ICC profile path")
     p_prnt.add_argument("--input-profile", help="Input color profile path (default: sRGB)")
     p_prnt.add_argument("--linearization", help="1D LUT linearization JSON curve file")
-    p_prnt.add_argument("--ink-limit", type=float, default=0.90, help="Maximum total ink limit [0.5 - 1.0] (default: 0.90)")
+    p_prnt.add_argument("--ink-limit", type=float, default=1.0, help="Maximum total ink limit [0.5 - 1.0] (default: 1.0 = no limit / full dynamic range)")
+    p_prnt.add_argument("--contrast", type=float, default=0.0, help="Contrast boost factor [0.0 - 0.5] (e.g. 0.15 = +15%% medium contrast)")
     p_prnt.add_argument("--intent", default="rel_col", choices=["rel_col", "perceptual", "sat", "abs_col"], help="Rendering intent")
     p_prnt.add_argument("--no-bpc", action="store_true", help="Disable Black Point Compensation")
     p_prnt.add_argument("--media", default="luster", choices=list(CANON_MEDIA_TYPES.keys()), help="Media type")
