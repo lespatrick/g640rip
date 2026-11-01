@@ -345,7 +345,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_prnt.add_argument("--borderless", "-b", action="store_true", help="Print borderless (fullbleed) with zero white margins")
     p_prnt.add_argument("--fit-mode", default="compensate", choices=["compensate", "fill", "fit", "none"], help="Framing mode: compensate (100%% safe area + edge buffer), fill (crop), fit (contain), none (original)")
     p_prnt.add_argument("--bleed", type=float, default=0.0, help="Bleed expansion overspray percentage for fill mode (default: 0.0%%)")
-    p_prnt.add_argument("--comp-x", type=float, default=2.7, help="Horizontal hardware bleed compensation percent (default: 2.7%%)")
+    p_prnt.add_argument("--comp-x", type=float, default=0.0, help="Horizontal hardware bleed compensation percent (default: 0.0%%)")
     p_prnt.add_argument("--comp-y", type=float, default=5.0, help="Vertical hardware bleed compensation percent (default: 5.0%%)")
     p_prnt.add_argument("--offset-x", type=float, default=0.0, help="Horizontal shift percent [-5.0 to +5.0] (default: 0.0)")
     p_prnt.add_argument("--offset-y", type=float, default=0.0, help="Vertical shift percent [-5.0 to +5.0] (default: 0.0)")
