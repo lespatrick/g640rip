@@ -137,6 +137,7 @@ def cmd_print_target(args):
             media_type=media_type,
             print_quality=PRINT_QUALITY_HIGH,
             backend=args.backend,
+            borderless=args.borderless,
         )
         console.print(f"[bold green]Print job submitted successfully! Status: {resp.get('status')}[/bold green]")
     except Exception as e:
@@ -182,8 +183,14 @@ def cmd_print(args):
         use_bpc=not args.no_bpc,
     )
 
-    console.print("[cyan]Executing 16-bit color transform (ICC -> LUT -> TIL)...[/cyan]")
-    processed_img = engine.process_production_image(img)
+    console.print(f"[cyan]Executing 16-bit color transform & layout (size={args.size}, borderless={args.borderless}, fit={args.fit_mode})...[/cyan]")
+    processed_img = engine.process_production_image(
+        img,
+        page_size_name=args.size,
+        borderless=args.borderless,
+        fit_mode=args.fit_mode,
+        bleed_pct=args.bleed,
+    )
 
     console.print("[cyan]Encoding Apple Raster (image/urf v1.4, 600 DPI)...[/cyan]")
     quality_val = PRINT_QUALITY_HIGH if args.quality == "high" else (PRINT_QUALITY_DRAFT if args.quality == "draft" else PRINT_QUALITY_NORMAL)
@@ -217,6 +224,7 @@ def cmd_print(args):
             media_type=media_type,
             print_quality=quality_val,
             backend=args.backend,
+            borderless=args.borderless,
         )
         console.print(f"[bold green]Print job submitted successfully! Status: {resp.get('status')}[/bold green]")
     except Exception as e:
@@ -313,6 +321,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_targ.add_argument("--size", default="A4", choices=list(PAPER_SIZES.keys()), help="Paper size")
     p_targ.add_argument("--backend", default="cups_raw", choices=["cups_raw", "direct_ipp"], help="Transport backend (default: cups_raw)")
     p_targ.add_argument("--dry-run", action="store_true", help="Generate raster without sending to printer")
+    p_targ.add_argument("--borderless", "-b", action="store_true", help="Print target borderless (fullbleed)")
     p_targ.add_argument("--out-raster", help="Save raw URF raster to file")
     p_targ.set_defaults(func=cmd_print_target)
 
@@ -327,6 +336,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_prnt.add_argument("--no-bpc", action="store_true", help="Disable Black Point Compensation")
     p_prnt.add_argument("--media", default="luster", choices=list(CANON_MEDIA_TYPES.keys()), help="Media type")
     p_prnt.add_argument("--size", default="A4", choices=list(PAPER_SIZES.keys()), help="Paper size")
+    p_prnt.add_argument("--borderless", "-b", action="store_true", help="Print borderless (fullbleed) with zero white margins")
+    p_prnt.add_argument("--fit-mode", default="fill", choices=["fill", "fit", "none"], help="Framing mode: fill (crop to edge), fit (contain), none (original)")
+    p_prnt.add_argument("--bleed", type=float, default=1.5, help="Bleed expansion overspray percentage for borderless (default: 1.5%%)")
     p_prnt.add_argument("--quality", default="high", choices=["draft", "normal", "high"], help="Print quality")
     p_prnt.add_argument("--printer-uri", help="Target printer IPP URL")
     p_prnt.add_argument("--backend", default="cups_raw", choices=["cups_raw", "direct_ipp"], help="Transport backend (default: cups_raw)")

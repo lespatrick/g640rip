@@ -476,6 +476,28 @@
             </select>
           </div>
         </div>
+        <div class="form-row" style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px;">
+          <label style="cursor: pointer;" for="borderlessToggle" title="Print edge-to-edge without white borders using Canon Fullbleed hardware mode">Borderless Printing (Fullbleed)</label>
+          <input type="checkbox" id="borderlessToggle" checked onchange="updateBorderlessUI()" style="width: auto;">
+        </div>
+        <div class="form-row" id="framingRow" style="display: flex; gap: 8px;">
+          <div style="flex: 1;">
+            <label>Framing / Layout</label>
+            <select id="fitMode">
+              <option value="fill" selected>Fill Page (Crop to Edge)</option>
+              <option value="fit">Fit to Paper (No Crop)</option>
+              <option value="none">Original 1:1</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label title="Overspray expansion to absorb mechanical paper feeder tolerances">Bleed Expansion</label>
+            <select id="bleedExpansion">
+              <option value="1.5" selected>1.5% (Standard)</option>
+              <option value="2.5">2.5% (Max)</option>
+              <option value="0.0">0.0% (Exact)</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <!-- Section 2: LittleCMS2 Pipeline -->
@@ -626,6 +648,11 @@
       document.getElementById('inkLimitBadge').innerText = val + '%';
     }
 
+    function updateBorderlessUI() {
+      const isBorderless = document.getElementById('borderlessToggle').checked;
+      document.getElementById('framingRow').style.opacity = isBorderless ? '1.0' : '0.5';
+    }
+
     function loadSelectedFile(file) {
       if (!file) return;
       currentFile = file;
@@ -746,6 +773,9 @@
       fd.append('quality', document.getElementById('quality').value);
       fd.append('ink_limit', parseFloat(document.getElementById('inkLimitSlider').value) / 100.0);
       fd.append('backend', document.getElementById('transportBackend').value);
+      fd.append('borderless', document.getElementById('borderlessToggle').checked);
+      fd.append('fit_mode', document.getElementById('fitMode').value);
+      fd.append('bleed_pct', parseFloat(document.getElementById('bleedExpansion').value));
 
       const btn = document.getElementById('btnSubmitPrint');
       btn.disabled = true;
@@ -782,6 +812,9 @@
       fd.append('quality', document.getElementById('quality').value);
       fd.append('ink_limit', parseFloat(document.getElementById('inkLimitSlider').value) / 100.0);
       fd.append('backend', document.getElementById('transportBackend').value);
+      fd.append('borderless', document.getElementById('borderlessToggle').checked);
+      fd.append('fit_mode', document.getElementById('fitMode').value);
+      fd.append('bleed_pct', parseFloat(document.getElementById('bleedExpansion').value));
 
       document.getElementById('logStatus').innerText = 'Exporting raw URF raster...';
       const res = await fetch('/api/export-raster', { method: 'POST', body: fd });

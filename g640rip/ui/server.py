@@ -141,6 +141,9 @@ async def post_export_raster(
     paper_size: str = Form("A4"),
     quality: str = Form("high"),
     ink_limit: float = Form(0.90),
+    borderless: bool = Form(False),
+    fit_mode: str = Form("fill"),
+    bleed_pct: float = Form(1.5),
 ):
     """Generate raw URF stream and return as downloadable file."""
     contents = await file.read()
@@ -162,7 +165,13 @@ async def post_export_raster(
             intent=INTENT_RELATIVE_COLORIMETRIC,
             use_bpc=True,
         )
-        processed_img = engine.process_production_image(img)
+        processed_img = engine.process_production_image(
+            img,
+            page_size_name=paper_size,
+            borderless=borderless,
+            fit_mode=fit_mode,
+            bleed_pct=bleed_pct,
+        )
 
     urf_bytes = encode_image_to_urf(processed_img, dpi=600, quality=qual_val)
     from fastapi.responses import Response
@@ -184,6 +193,9 @@ async def post_print(
     quality: str = Form("high"),
     ink_limit: float = Form(0.90),
     backend: str = Form("cups_raw"),
+    borderless: bool = Form(False),
+    fit_mode: str = Form("fill"),
+    bleed_pct: float = Form(1.5),
 ):
     """Execute raw IPP Print-Job directly to printer."""
     contents = await file.read()
@@ -211,7 +223,13 @@ async def post_print(
             intent=INTENT_RELATIVE_COLORIMETRIC,
             use_bpc=True,
         )
-        processed_img = engine.process_production_image(img)
+        processed_img = engine.process_production_image(
+            img,
+            page_size_name=paper_size,
+            borderless=borderless,
+            fit_mode=fit_mode,
+            bleed_pct=bleed_pct,
+        )
         job_title = f"G640RIP-{file.filename}"
 
     # Encode URF
@@ -228,6 +246,7 @@ async def post_print(
             media_type=canon_media,
             print_quality=qual_val,
             backend=backend,
+            borderless=borderless,
         )
         return {"status": "success", "message": "Job dispatched successfully", "resp": resp}
     except Exception as e:
