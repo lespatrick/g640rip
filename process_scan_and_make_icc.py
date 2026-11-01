@@ -13,6 +13,7 @@ import argparse
 import subprocess
 import numpy as np
 from PIL import Image, ImageDraw
+from scipy.interpolate import interp1d
 
 from g640rip.color.ink_limit import InkLimiter
 
@@ -92,6 +93,7 @@ def main():
     parser.add_argument("--scan", default="IMG_20261101_0001.tif", help="Scanned chart TIFF image")
     parser.add_argument("--ti2", default="targets/G640_10x15_80p_i1.ti2", help="Target definition file")
     parser.add_argument("--strength", "--correction-strength", "-s", type=float, default=1.0, help="Color correction strength fraction [0.1..1.0] (default: 1.0 = 100%% correction, 0.70 = 70%% correction)")
+    parser.add_argument("--warmth", type=float, default=0.0, help="Optional warmth adjustment bias [-2.0..+2.0] (default: 0.0, positive adds warmth/yellow-red ink to physical prints)")
     parser.add_argument("--ink-limit", type=float, default=1.0, help="Optional ink limit fraction [0.5..1.0] (default: 1.0 = no limit)")
     parser.add_argument("--name", default=None, help="Custom base name for output profile")
     args = parser.parse_args()
@@ -202,10 +204,34 @@ def main():
         limiter = InkLimiter(max_total_ink=args.ink_limit, soft_knee=knee)
         print(f"   Applied Ink Limiter to target RGB: Max={int(args.ink_limit*100)}%")
 
+    # Calibrate scanner sensor chromatic distortion using neutral gray ramp
+    gray_samples = []
+    for sid, loc, r, g, b, exp_x, exp_y, exp_z in ti2_records:
+        if abs(r - g) < 1e-4 and abs(g - b) < 1e-4:
+            meas = patch_measurements.get(loc)
+            if meas:
+                gray_samples.append(meas["lab"])
+
+    gray_samples = np.array(gray_samples)
+    L_grays = gray_samples[:, 0]
+    a_biases = gray_samples[:, 1]
+    b_biases = gray_samples[:, 2]
+
+    sort_idx = np.argsort(L_grays)
+    L_grays = L_grays[sort_idx]
+    a_biases = a_biases[sort_idx]
+    b_biases = b_biases[sort_idx]
+
+    scanner_a_bias = interp1d(L_grays, a_biases, kind="linear", fill_value="extrapolate")
+    scanner_b_bias = interp1d(L_grays, b_biases, kind="linear", fill_value="extrapolate")
+    print(f"   Calibrated scanner chromatic bias (neutralized false midtone magenta/blue shift across {len(L_grays)} gray patches).")
+
     # Generate Argyll TI3 file with blended color correction
     print(f"5. Writing Argyll CGATS .ti3 file: {ti3_file}...")
     if strength < 1.0:
         print(f"   Blending color correction at {strength_pct}% strength (30% nominal target + 70% measured scan in L*a*b* space)...")
+    if args.warmth != 0.0:
+        print(f"   Applying custom warmth bias: {args.warmth:+.1f}")
     with open(ti3_file, "w") as f:
         f.write("CTI3\n\n")
         f.write(f'DESCRIPTOR "{desc_str}"\n')
@@ -228,19 +254,27 @@ def main():
                 print(f"Error: Missing measurement for patch {loc}!")
                 sys.exit(1)
             
-            xyz_meas = meas["xyz"]
             lab_meas = meas["lab"]
+
+            # Neutralize scanner's chromatic distortion across neutral axis
+            L_val = lab_meas[0]
+            # Warmth adjustment: reducing measured b* and a* makes output profile spray more yellow & red ink
+            lab_meas_cal = np.array([
+                L_val,
+                lab_meas[1] - float(scanner_a_bias(L_val)) - (args.warmth * 0.5),
+                lab_meas[2] - float(scanner_b_bias(L_val)) - (args.warmth * 1.5),
+            ])
 
             # Blend color correction in Lab space
             if strength < 1.0:
                 xyz_exp_d65 = np.array([exp_x, exp_y, exp_z])
                 xyz_exp_d50 = adapt_d65_to_d50(xyz_exp_d65)
                 lab_exp = xyz_to_lab(xyz_exp_d50)
-                # Linear blend between expected target Lab and scanned measured Lab
-                lab_blended = (1.0 - strength) * lab_exp + strength * lab_meas
+                # Linear blend between expected target Lab and calibrated scanned measured Lab
+                lab_blended = (1.0 - strength) * lab_exp + strength * lab_meas_cal
                 xyz_final = lab_to_xyz(lab_blended)
             else:
-                xyz_final = xyz_meas
+                xyz_final = lab_to_xyz(lab_meas_cal)
 
             # If ink limited, transform RGB sent to device
             r_dev, g_dev, b_dev = r, g, b
