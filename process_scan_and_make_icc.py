@@ -108,6 +108,7 @@ def main():
     parser.add_argument("--ti2", default="targets/G640_10x15_80p_i1.ti2", help="Target definition file")
     parser.add_argument("--strength", "--correction-strength", "-s", type=float, default=1.0, help="Color correction strength fraction [0.1..1.0] (default: 1.0 = 100%% correction, 0.70 = 70%% correction)")
     parser.add_argument("--warmth", type=float, default=0.0, help="Optional warmth adjustment bias [-2.0..+2.0] (default: 0.0, positive adds warmth/yellow-red ink to physical prints)")
+    parser.add_argument("--bias-factor", type=float, default=0.50, help="Scanner neutral chromatic distortion neutralization factor [0.0..1.0] (default: 0.50 = 50%% adjustment between raw scan and full neutralization)")
     parser.add_argument("--ink-limit", type=float, default=1.0, help="Optional ink limit fraction [0.5..1.0] (default: 1.0 = no limit)")
     parser.add_argument("--name", default=None, help="Custom base name for output profile")
     args = parser.parse_args()
@@ -258,7 +259,7 @@ def main():
 
     scanner_a_bias = interp1d(unique_L, unique_a, kind="linear", fill_value="extrapolate")
     scanner_b_bias = interp1d(unique_L, unique_b, kind="linear", fill_value="extrapolate")
-    print(f"   Calibrated scanner chromatic bias (neutralized false midtone magenta/blue shift across {len(unique_L)} distinct gray steps).")
+    print(f"   Calibrated scanner chromatic bias (neutralization factor: {int(round(args.bias_factor * 100))}% across {len(unique_L)} distinct gray steps).")
 
     # Generate Argyll TI3 file with blended color correction
     print(f"5. Writing Argyll CGATS .ti3 file: {ti3_file}...")
@@ -290,13 +291,14 @@ def main():
             
             lab_meas = meas["lab"]
 
-            # Neutralize scanner's chromatic distortion across neutral axis
+            # Neutralize scanner's chromatic distortion across neutral axis with calibrated bias factor
             L_val = lab_meas[0]
+            bias_factor = float(np.clip(args.bias_factor, 0.0, 1.0))
             # Warmth adjustment: reducing measured b* and a* makes output profile spray more yellow & red ink
             lab_meas_cal = np.array([
                 L_val,
-                lab_meas[1] - float(scanner_a_bias(L_val)) - (args.warmth * 0.5),
-                lab_meas[2] - float(scanner_b_bias(L_val)) - (args.warmth * 1.5),
+                lab_meas[1] - (bias_factor * float(scanner_a_bias(L_val))) - (args.warmth * 0.5),
+                lab_meas[2] - (bias_factor * float(scanner_b_bias(L_val))) - (args.warmth * 1.5),
             ])
 
             # Blend color correction in Lab space
