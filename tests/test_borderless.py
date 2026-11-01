@@ -65,8 +65,12 @@ class TestBorderless(unittest.TestCase):
         self.assertEqual(list(arr[1800, 1200]), [10, 20, 30])
 
     def test_layout_borderless_compensate(self):
-        # 10x15 photo with distinctive corner pixels
-        img = Image.new("RGB", (1000, 1500), color=(50, 100, 150))
+        # 10x15 photo with distinct value in every column to verify zero repeated columns
+        w, h = 2362, 3520
+        grad = np.tile(np.arange(w, dtype=np.uint16) % 256, (h, 1)).astype(np.uint8)
+        rgb = np.stack([grad, grad, grad], axis=2)
+        img = Image.fromarray(rgb, mode="RGB")
+
         framed = ColorEngine.prepare_image_layout(
             img,
             page_size_name="10x15",
@@ -79,11 +83,19 @@ class TestBorderless(unittest.TestCase):
         )
         self.assertEqual(framed.size, (2362, 3520))
         arr = np.array(framed)
-        # Center has image content
-        self.assertEqual(list(arr[1760, 1181]), [50, 100, 150])
-        # Right edge has authentic image content, no white borders (0xFF)
-        self.assertEqual(list(arr[0, 0]), [50, 100, 150])
-        self.assertEqual(list(arr[3519, 2361]), [50, 100, 150])
+
+        # Safe area height: 95% of 3520 = 3344
+        safe_h = int(round(3520 * 0.95))
+
+        # Check left edge: authentic image gradient, NOT repeated pixels
+        self.assertFalse(np.array_equal(arr[:safe_h, 0], arr[:safe_h, 1]))
+
+        # Check right edge: authentic image gradient, NOT repeated pixels
+        self.assertFalse(np.array_equal(arr[:safe_h, -1], arr[:safe_h, -2]))
+
+        # Bottom cut-off zone (3344..3520) is padded for feed roller absorption
+        self.assertTrue(np.array_equal(arr[safe_h, :], arr[safe_h - 1, :]))
+        self.assertTrue(np.array_equal(arr[-1, :], arr[safe_h - 1, :]))
 
 
 if __name__ == "__main__":

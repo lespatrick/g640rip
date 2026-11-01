@@ -166,57 +166,39 @@ class ColorEngine:
 
         if fit_mode == "compensate":
             # Hardware Bleed Compensation:
-            # Horizontal (width): covers canvas_w so the real photo reaches the right edge with 0 repeated pixels!
-            # Vertical (height): protects the bottom with comp_y_pct so nothing gets cut off by feed rollers.
-            shrink_w = float(np.clip(comp_x_pct / 100.0, 0.0, 0.15))
+            # - Horizontal (width): Authentic photo ALWAYS covers 100% of canvas_w (scale >= canvas_w / img_w).
+            #   Completely eliminates repeated pixels: 0 repeated pixels on left, 0 repeated pixels on right.
+            # - Vertical (height): Protects the bottom from printer mechanical feed roller cut-off (comp_y_pct).
+            #   Bottom of the photo is aligned to safe_h, with overspray buffer below it absorbing the physical cut.
             shrink_h = float(np.clip(comp_y_pct / 100.0, 0.0, 0.20))
-
-            safe_w = max(100, int(round(canvas_w * (1.0 - shrink_w))))
             safe_h = max(100, int(round(canvas_h * (1.0 - shrink_h))))
 
-            scale = max(safe_w / img_w, safe_h / img_h)
+            # Uniform scaling guaranteeing real photo covers full width and safe height
+            scale = max(canvas_w / img_w, safe_h / img_h)
             inner_w = int(round(img_w * scale))
             inner_h = int(round(img_h * scale))
 
             inner_resized = image.resize((inner_w, inner_h), resample=Image.Resampling.LANCZOS)
 
+            # Horizontal placement: center-crop with optional offset, guaranteed inner_w >= canvas_w
             shift_x = int(round((offset_x_pct / 100.0) * canvas_w))
+            base_crop_x = (inner_w - canvas_w) // 2
+            crop_x = int(np.clip(base_crop_x + shift_x, 0, max(0, inner_w - canvas_w)))
+            inner_resized = inner_resized.crop((crop_x, 0, crop_x + canvas_w, inner_h))
+
+            # Vertical placement: align bottom to safe_h to protect bottom edge from mechanical feed cut-off
             shift_y = int(round((offset_y_pct / 100.0) * canvas_h))
+            base_crop_y = max(0, inner_h - safe_h)
+            crop_y = int(np.clip(base_crop_y + shift_y, 0, max(0, inner_h - safe_h)))
+            inner_cropped = inner_resized.crop((0, crop_y, canvas_w, crop_y + safe_h))
 
-            # Horizontal placement / crop
-            if inner_w >= canvas_w:
-                crop_x = int(np.clip((inner_w - canvas_w) // 2 + shift_x, 0, inner_w - canvas_w))
-                inner_resized = inner_resized.crop((crop_x, 0, crop_x + canvas_w, inner_h))
-                paste_x = 0
-                draw_w = canvas_w
-            else:
-                paste_x = int(np.clip((canvas_w - inner_w) // 2 + shift_x, 0, canvas_w - inner_w))
-                draw_w = inner_w
-
-            # Vertical placement / crop
-            if inner_h >= canvas_h:
-                crop_y = int(np.clip((inner_h - canvas_h) // 2 + shift_y, 0, inner_h - canvas_h))
-                inner_resized = inner_resized.crop((0, crop_y, draw_w, crop_y + canvas_h))
-                paste_y = 0
-                draw_h = canvas_h
-            else:
-                paste_y = int(np.clip((canvas_h - inner_h) // 2 + shift_y, 0, canvas_h - inner_h))
-                draw_h = inner_h
-
-            # Create canvas and draw photo
+            # Build canvas: real photo fills columns 0..canvas_w and rows 0..safe_h
             canvas_arr = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
-            inner_arr = np.array(inner_resized, dtype=np.uint8)
-            canvas_arr[paste_y : paste_y + draw_h, paste_x : paste_x + draw_w] = inner_arr
+            canvas_arr[:safe_h, :] = np.array(inner_cropped, dtype=np.uint8)
 
-            # Edge replication buffer only if inner dimensions were smaller than canvas
-            if paste_y > 0:
-                canvas_arr[:paste_y, paste_x : paste_x + draw_w] = inner_arr[0:1, :]
-            if paste_y + draw_h < canvas_h:
-                canvas_arr[paste_y + draw_h :, paste_x : paste_x + draw_w] = inner_arr[-1:, :]
-            if paste_x > 0:
-                canvas_arr[:, :paste_x] = canvas_arr[:, paste_x : paste_x + 1]
-            if paste_x + draw_w < canvas_w:
-                canvas_arr[:, paste_x + draw_w :] = canvas_arr[:, paste_x + draw_w - 1 : paste_x + draw_w]
+            # Replicate bottom row ONLY into the printer's cut-off overspray zone (y >= safe_h)
+            if safe_h < canvas_h:
+                canvas_arr[safe_h:, :] = canvas_arr[safe_h - 1 : safe_h, :]
 
             return Image.fromarray(canvas_arr, mode="RGB")
 
