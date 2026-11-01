@@ -183,13 +183,17 @@ def cmd_print(args):
         use_bpc=not args.no_bpc,
     )
 
-    console.print(f"[cyan]Executing 16-bit color transform & layout (size={args.size}, borderless={args.borderless}, fit={args.fit_mode}, contrast={args.contrast:+.2f})...[/cyan]")
+    console.print(f"[cyan]Executing 16-bit color transform & layout (size={args.size}, borderless={args.borderless}, fit={args.fit_mode}, comp=X:{args.comp_x}%/Y:{args.comp_y}%, contrast={args.contrast:+.2f})...[/cyan]")
     processed_img = engine.process_production_image(
         img,
         page_size_name=args.size,
         borderless=args.borderless,
         fit_mode=args.fit_mode,
         bleed_pct=args.bleed,
+        comp_x_pct=args.comp_x,
+        comp_y_pct=args.comp_y,
+        offset_x_pct=args.offset_x,
+        offset_y_pct=args.offset_y,
         contrast=args.contrast,
     )
 
@@ -339,8 +343,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_prnt.add_argument("--media", default="luster", choices=list(CANON_MEDIA_TYPES.keys()), help="Media type")
     p_prnt.add_argument("--size", default="A4", choices=list(PAPER_SIZES.keys()), help="Paper size")
     p_prnt.add_argument("--borderless", "-b", action="store_true", help="Print borderless (fullbleed) with zero white margins")
-    p_prnt.add_argument("--fit-mode", default="fill", choices=["fill", "fit", "none"], help="Framing mode: fill (crop to edge), fit (contain), none (original)")
-    p_prnt.add_argument("--bleed", type=float, default=1.5, help="Bleed expansion overspray percentage for borderless (default: 1.5%%)")
+    p_prnt.add_argument("--fit-mode", default="compensate", choices=["compensate", "fill", "fit", "none"], help="Framing mode: compensate (100%% safe area + edge buffer), fill (crop), fit (contain), none (original)")
+    p_prnt.add_argument("--bleed", type=float, default=0.0, help="Bleed expansion overspray percentage for fill mode (default: 0.0%%)")
+    p_prnt.add_argument("--comp-x", type=float, default=2.7, help="Horizontal hardware bleed compensation percent (default: 2.7%%)")
+    p_prnt.add_argument("--comp-y", type=float, default=5.0, help="Vertical hardware bleed compensation percent (default: 5.0%%)")
+    p_prnt.add_argument("--offset-x", type=float, default=0.0, help="Horizontal shift percent [-5.0 to +5.0] (default: 0.0)")
+    p_prnt.add_argument("--offset-y", type=float, default=0.0, help="Vertical shift percent [-5.0 to +5.0] (default: 0.0)")
     p_prnt.add_argument("--quality", default="high", choices=["draft", "normal", "high"], help="Print quality")
     p_prnt.add_argument("--printer-uri", help="Target printer IPP URL")
     p_prnt.add_argument("--backend", default="cups_raw", choices=["cups_raw", "direct_ipp"], help="Transport backend (default: cups_raw)")

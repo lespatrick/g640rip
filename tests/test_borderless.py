@@ -16,7 +16,11 @@ class TestBorderless(unittest.TestCase):
         self.assertEqual(spec_4x6["height_600dpi"], 3600)
 
         spec_10x15 = get_paper_spec("10x15")
-        self.assertEqual(spec_10x15["media_fullbleed"], "4x6.Fullbleed")
+        self.assertEqual(spec_10x15["media_fullbleed"], "Postcard.Fullbleed")
+        self.assertEqual(spec_10x15["width_mm"], 100.0)
+        self.assertEqual(spec_10x15["height_mm"], 149.0)
+        self.assertEqual(spec_10x15["width_600dpi"], 2362)
+        self.assertEqual(spec_10x15["height_600dpi"], 3520)
 
         spec_a4 = get_paper_spec("A4")
         self.assertTrue(spec_a4["supports_borderless"])
@@ -59,6 +63,27 @@ class TestBorderless(unittest.TestCase):
         self.assertEqual(list(arr[0, 0]), [255, 255, 255])
         # Center has image content
         self.assertEqual(list(arr[1800, 1200]), [10, 20, 30])
+
+    def test_layout_borderless_compensate(self):
+        # 10x15 photo with distinctive corner pixels
+        img = Image.new("RGB", (1000, 1500), color=(50, 100, 150))
+        framed = ColorEngine.prepare_image_layout(
+            img,
+            page_size_name="10x15",
+            borderless=True,
+            fit_mode="compensate",
+            comp_x_pct=2.7,
+            comp_y_pct=5.0,
+            auto_rotate=True,
+            dpi=600,
+        )
+        self.assertEqual(framed.size, (2362, 3520))
+        arr = np.array(framed)
+        # Center has image content
+        self.assertEqual(list(arr[1760, 1181]), [50, 100, 150])
+        # Edges are clamped/replicated, no white borders (0xFF)
+        self.assertEqual(list(arr[0, 0]), [50, 100, 150])
+        self.assertEqual(list(arr[3519, 2361]), [50, 100, 150])
 
 
 if __name__ == "__main__":
