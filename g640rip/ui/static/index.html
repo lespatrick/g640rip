@@ -515,11 +515,20 @@
           </select>
         </div>
         <div class="form-row">
+          <label>Contrast Boost (S-Curve)</label>
+          <select id="contrastBoost" onchange="regenerateProof()">
+            <option value="0.0" selected>Normal (0% - Linear ICC)</option>
+            <option value="0.10">+10% (Subtle Punch)</option>
+            <option value="0.15">+15% (Medium Contrast)</option>
+            <option value="0.25">+25% (High Contrast / Deep Blacks)</option>
+          </select>
+        </div>
+        <div class="form-row">
           <div class="label-wrap">
             <label>Total Ink Limit (TIL)</label>
-            <span class="val-badge" id="inkLimitBadge">90%</span>
+            <span class="val-badge" id="inkLimitBadge">100%</span>
           </div>
-          <input type="range" id="inkLimitSlider" min="50" max="100" value="90" oninput="updateInkBadge(this.value)">
+          <input type="range" id="inkLimitSlider" min="50" max="100" value="100" oninput="updateInkBadge(this.value)">
         </div>
         <div class="form-row" style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px;">
           <label style="cursor: pointer;" for="paperWhiteToggle" title="Simulate exact paper white base tint (Absolute Colorimetric). Keep unchecked for standard Relative Colorimetric + BPC photo proofing.">Simulate Paper White Tint</label>
@@ -706,6 +715,7 @@
       fd.append('paper_profile_path', profPath);
       fd.append('simulate_paper_white', paperWhite);
       fd.append('intent', document.getElementById('renderingIntent').value);
+      fd.append('contrast', parseFloat(document.getElementById('contrastBoost').value));
 
       document.getElementById('logStatus').innerText = `Recalculating soft proof with ${profName}...`;
 
@@ -799,6 +809,7 @@
       fd.append('fit_mode', document.getElementById('fitMode').value);
       fd.append('bleed_pct', parseFloat(document.getElementById('bleedExpansion').value));
       fd.append('intent', document.getElementById('renderingIntent').value);
+      fd.append('contrast', parseFloat(document.getElementById('contrastBoost').value));
 
       const btn = document.getElementById('btnSubmitPrint');
       btn.disabled = true;
@@ -839,6 +850,7 @@
       fd.append('fit_mode', document.getElementById('fitMode').value);
       fd.append('bleed_pct', parseFloat(document.getElementById('bleedExpansion').value));
       fd.append('intent', document.getElementById('renderingIntent').value);
+      fd.append('contrast', parseFloat(document.getElementById('contrastBoost').value));
 
       document.getElementById('logStatus').innerText = 'Exporting raw URF raster...';
       const res = await fetch('/api/export-raster', { method: 'POST', body: fd });

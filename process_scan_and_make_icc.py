@@ -88,6 +88,20 @@ def lab_to_xyz(lab):
     return np.array([x, y, z])
 
 
+def flare_compensate_xyz(xyz, flare_amount=0.52):
+    """
+    Compensate for flatbed scanner optical stray light flare.
+    Flatbed scanners suffer from internal reflections between platen glass and glossy paper,
+    falsely lifting black density (Dmax) from true L* ~3.0 (Y ~0.35%) to L* ~8.0 (Y ~0.90%).
+    Removing optical flare restores true deep photographic blacks and dynamic range.
+    """
+    x, y, z = float(xyz[0]), float(xyz[1]), float(xyz[2])
+    flare_factor = (1.0 - np.clip(y / 100.0, 0.0, 1.0))
+    y_corr = max(0.35, y - flare_amount * flare_factor)
+    scale = y_corr / max(y, 1e-5)
+    return np.array([max(0.30, x * scale), y_corr, max(0.25, z * scale)])
+
+
 def main():
     parser = argparse.ArgumentParser(description="Process scanned target chart and create ICC profile.")
     parser.add_argument("--scan", default="IMG_20261101_0001.tif", help="Scanned chart TIFF image")
@@ -157,7 +171,8 @@ def main():
                 n_trim = int(len(p_ch) * 0.05)
                 rgb_mean[ch] = np.mean(p_ch[n_trim:-n_trim] if n_trim > 0 else p_ch)
 
-            xyz = srgb_to_xyz(rgb_mean)
+            xyz_raw = srgb_to_xyz(rgb_mean)
+            xyz = flare_compensate_xyz(xyz_raw)
             lab = xyz_to_lab(xyz)
             patch_measurements[loc] = {
                 "rgb_raw": rgb_mean,
@@ -218,13 +233,32 @@ def main():
     b_biases = gray_samples[:, 2]
 
     sort_idx = np.argsort(L_grays)
-    L_grays = L_grays[sort_idx]
-    a_biases = a_biases[sort_idx]
-    b_biases = b_biases[sort_idx]
+    L_sorted = L_grays[sort_idx]
+    a_sorted = a_biases[sort_idx]
+    b_sorted = b_biases[sort_idx]
 
-    scanner_a_bias = interp1d(L_grays, a_biases, kind="linear", fill_value="extrapolate")
-    scanner_b_bias = interp1d(L_grays, b_biases, kind="linear", fill_value="extrapolate")
-    print(f"   Calibrated scanner chromatic bias (neutralized false midtone magenta/blue shift across {len(L_grays)} gray patches).")
+    # Cluster close L values (< 0.5 delta) so interpolation points are strictly increasing
+    unique_L, unique_a, unique_b = [], [], []
+    cur_L, cur_a, cur_b = [L_sorted[0]], [a_sorted[0]], [b_sorted[0]]
+    for i in range(1, len(L_sorted)):
+        if L_sorted[i] - cur_L[0] < 0.5:
+            cur_L.append(L_sorted[i])
+            cur_a.append(a_sorted[i])
+            cur_b.append(b_sorted[i])
+        else:
+            unique_L.append(float(np.mean(cur_L)))
+            unique_a.append(float(np.mean(cur_a)))
+            unique_b.append(float(np.mean(cur_b)))
+            cur_L = [L_sorted[i]]
+            cur_a = [a_sorted[i]]
+            cur_b = [b_sorted[i]]
+    unique_L.append(float(np.mean(cur_L)))
+    unique_a.append(float(np.mean(cur_a)))
+    unique_b.append(float(np.mean(cur_b)))
+
+    scanner_a_bias = interp1d(unique_L, unique_a, kind="linear", fill_value="extrapolate")
+    scanner_b_bias = interp1d(unique_L, unique_b, kind="linear", fill_value="extrapolate")
+    print(f"   Calibrated scanner chromatic bias (neutralized false midtone magenta/blue shift across {len(unique_L)} distinct gray steps).")
 
     # Generate Argyll TI3 file with blended color correction
     print(f"5. Writing Argyll CGATS .ti3 file: {ti3_file}...")
@@ -298,7 +332,8 @@ def main():
         "-qm",     # Medium quality cLUT
         "-al",     # Lab cLUT algorithm
         "-cmt",    # Monitor in typical environment
-        "-dpp",    # Practical reflection print
+        "-dpc",    # Critical print evaluation environment P1 (preserves deep black & shadow contrast)
+        "-V", "2.0",  # Dark region cLUT emphasis for photographic Dmax
         "-O", icc_file,
         f"targets/{base_name}"
     ]
@@ -315,6 +350,13 @@ def main():
         import shutil
         shutil.copy2(icc_file, dest_icc)
         print(f"[INSTALLED] Installed profile to: {dest_icc}")
+
+        # Also copy to system-wide ColorSync directory if permitted
+        sys_colorsync = "/Library/ColorSync/Profiles"
+        if os.path.exists(sys_colorsync) and os.access(sys_colorsync, os.W_OK):
+            shutil.copy2(icc_file, os.path.join(sys_colorsync, f"{base_name}.icc"))
+            print(f"[INSTALLED] Installed profile to system-wide: {sys_colorsync}/{base_name}.icc")
+
         print("Profile is now active and selectable in the G640 RIP Web UI & CLI!")
     else:
         print(f"Error: Expected output ICC file {icc_file} was not created!")

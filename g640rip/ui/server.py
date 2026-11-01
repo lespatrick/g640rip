@@ -105,6 +105,7 @@ async def post_proof(
     paper_profile_path: str = Form(...),
     simulate_paper_white: bool = Form(False),
     intent: str = Form("perceptual"),
+    contrast: float = Form(0.0),
 ):
     """Generate soft proof and gamut warning preview."""
     contents = await file.read()
@@ -115,6 +116,10 @@ async def post_proof(
             orig_img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
+
+    # Apply photographic contrast boost if configured
+    if abs(contrast) >= 1e-4:
+        orig_img = ColorEngine.apply_contrast_curve(orig_img, contrast)
 
     # Encode to Base64 JPEG/PNG for instant Web display
     def to_b64(img: Image.Image) -> str:
@@ -162,7 +167,8 @@ async def post_export_raster(
     media_type: str = Form("luster"),
     paper_size: str = Form("A4"),
     quality: str = Form("high"),
-    ink_limit: float = Form(0.90),
+    ink_limit: float = Form(1.0),
+    contrast: float = Form(0.0),
     borderless: bool = Form(False),
     fit_mode: str = Form("fill"),
     bleed_pct: float = Form(1.5),
@@ -187,6 +193,7 @@ async def post_export_raster(
         engine = ColorEngine(
             paper_profile_path=prof_path,
             ink_limiter=limiter,
+            contrast=contrast,
             intent=use_intent,
             use_bpc=True,
         )
@@ -196,6 +203,7 @@ async def post_export_raster(
             borderless=borderless,
             fit_mode=fit_mode,
             bleed_pct=bleed_pct,
+            contrast=contrast,
         )
 
     urf_bytes = encode_image_to_urf(processed_img, dpi=600, quality=qual_val)
@@ -216,7 +224,8 @@ async def post_print(
     media_type: str = Form("luster"),
     paper_size: str = Form("A4"),
     quality: str = Form("high"),
-    ink_limit: float = Form(0.90),
+    ink_limit: float = Form(1.0),
+    contrast: float = Form(0.0),
     backend: str = Form("cups_raw"),
     borderless: bool = Form(False),
     fit_mode: str = Form("fill"),
@@ -248,6 +257,7 @@ async def post_print(
         engine = ColorEngine(
             paper_profile_path=prof_path,
             ink_limiter=limiter,
+            contrast=contrast,
             intent=use_intent,
             use_bpc=True,
         )
@@ -257,6 +267,7 @@ async def post_print(
             borderless=borderless,
             fit_mode=fit_mode,
             bleed_pct=bleed_pct,
+            contrast=contrast,
         )
         job_title = f"G640RIP-{file.filename}"
 

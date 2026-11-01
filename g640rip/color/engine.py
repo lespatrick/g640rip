@@ -34,6 +34,7 @@ class ColorEngine:
         input_profile_path: Optional[str] = None,
         linearization: Optional[LinearizationLUT] = None,
         ink_limiter: Optional[InkLimiter] = None,
+        contrast: float = 0.0,
         intent: int = INTENT_RELATIVE_COLORIMETRIC,
         use_bpc: bool = True,
     ):
@@ -41,6 +42,7 @@ class ColorEngine:
         self.input_profile_path = input_profile_path
         self.linearization = linearization or LinearizationLUT.create_identity()
         self.ink_limiter = ink_limiter or InkLimiter(max_total_ink=1.0)
+        self.contrast = float(contrast)
         self.intent = intent
         self.use_bpc = use_bpc
 
@@ -188,6 +190,29 @@ class ColorEngine:
 
         return image
 
+    @staticmethod
+    def apply_contrast_curve(image: Image.Image, contrast: float = 0.0) -> Image.Image:
+        """
+        Apply photographic contrast boost using smooth symmetric sigmoid S-curve.
+        y = x^gamma / (x^gamma + (1-x)^gamma)
+        contrast = 0.0  -> gamma = 1.0 (identity / linear)
+        contrast = 0.15 -> gamma = 1.15 (medium contrast punch)
+        contrast = 0.25 -> gamma = 1.25 (high contrast / deep blacks)
+        Preserves 0.0 (pure black), 1.0 (pure white), and 0.5 (midpoint) with zero clipping.
+        """
+        if abs(contrast) < 1e-4:
+            return image
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        arr = np.array(image, dtype=np.float32) / 255.0
+        gamma = 1.0 + float(contrast)
+        eps = 1e-5
+        x = np.clip(arr, eps, 1.0 - eps)
+        xg = x ** gamma
+        yg = xg / (xg + (1.0 - x) ** gamma)
+        out = np.clip(yg * 255.0 + 0.5, 0, 255).astype(np.uint8)
+        return Image.fromarray(out, mode="RGB")
+
     def process_production_image(
         self,
         image: Image.Image,
@@ -195,16 +220,18 @@ class ColorEngine:
         borderless: bool = False,
         fit_mode: str = "fill",
         bleed_pct: float = 1.5,
+        contrast: Optional[float] = None,
         input_profile_override: Optional[LCMS2Profile] = None,
     ) -> Image.Image:
         """
         Mode 2: Production Mode.
         Full 16-bit precision color pipeline:
         1. Optional high-quality Lanczos scaling & framing for target paper size (borderless / bordered)
-        2. Input ICC -> Output Paper ICC transform (RelCol + BPC)
-        3. 1D Channel Linearization LUT application
-        4. Total Ink Limit (TIL) saturation limiting
-        5. Quantization to 8-bit RGB for URF streaming
+        2. High-precision 16-bit Contrast S-curve boost (preserves pure black & white without clipping)
+        3. Input ICC -> Output Paper ICC transform (RelCol + BPC)
+        4. 1D Channel Linearization LUT application
+        5. Total Ink Limit (TIL) saturation limiting
+        6. Quantization to 8-bit RGB for URF streaming
         """
         # Step 0: Layout & framing if page_size_name is requested
         if page_size_name is not None:
@@ -224,6 +251,15 @@ class ColorEngine:
         arr_8 = np.array(image, dtype=np.uint8)
         # Scaled up to 16-bit: (x * 257) maps [0..255] exactly to [0..65535]
         arr_16 = (arr_8.astype(np.uint16) * 257)
+
+        # Apply 16-bit Contrast S-Curve if enabled
+        c_val = self.contrast if contrast is None else contrast
+        if abs(c_val) >= 1e-4:
+            gamma = 1.0 + float(c_val)
+            eps = 1e-5
+            x = np.clip(arr_16.astype(np.float32) / 65535.0, eps, 1.0 - eps)
+            xg = x ** gamma
+            arr_16 = np.clip((xg / (xg + (1.0 - x) ** gamma)) * 65535.0 + 0.5, 0, 65535).astype(np.uint16)
 
         # Step 2: LittleCMS2 ICC Transformation (if paper profile provided)
         out_16 = arr_16

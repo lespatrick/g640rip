@@ -10,16 +10,17 @@ class InkLimiter:
     on specific media types (e.g., fine-art rag, uncoated, or heavy photo paper).
     """
 
-    def __init__(self, max_total_ink: float = 0.90, soft_knee: float = 0.80):
+    def __init__(self, max_total_ink: float = 1.0, soft_knee: Optional[float] = None):
         """
         Parameters:
-            max_total_ink: Maximum allowed total ink density [0.5 to 1.0].
-                           1.0 means no limit (100% full black).
-                           0.85 means max 85% total ink deposition.
+            max_total_ink: Maximum allowed total ink density [0.4 to 1.0].
+                           1.0 means no limit (100% full black, standard for photo paper).
+                           0.85 means max 85% total ink deposition (for uncoated or rag paper).
             soft_knee: Threshold where soft roll-off starts [0.0 to max_total_ink].
         """
         self.max_total_ink = float(np.clip(max_total_ink, 0.40, 1.0))
-        self.soft_knee = float(np.clip(soft_knee, 0.30, self.max_total_ink))
+        knee = (self.max_total_ink - 0.10) if soft_knee is None else soft_knee
+        self.soft_knee = float(np.clip(knee, 0.30, self.max_total_ink))
 
     def apply_rgb(self, rgb_array: np.ndarray) -> np.ndarray:
         """
