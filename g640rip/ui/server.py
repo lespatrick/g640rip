@@ -165,13 +165,17 @@ async def post_export_raster(
     mode: str = Form("production"),
     paper_profile_path: Optional[str] = Form(None),
     media_type: str = Form("luster"),
-    paper_size: str = Form("A4"),
+    paper_size: str = Form("10x15"),
     quality: str = Form("high"),
     ink_limit: float = Form(1.0),
     contrast: float = Form(0.0),
-    borderless: bool = Form(False),
-    fit_mode: str = Form("fill"),
-    bleed_pct: float = Form(1.5),
+    borderless: bool = Form(True),
+    fit_mode: str = Form("compensate"),
+    bleed_pct: float = Form(0.0),
+    comp_x_pct: float = Form(2.7),
+    comp_y_pct: float = Form(5.0),
+    offset_x_pct: float = Form(0.0),
+    offset_y_pct: float = Form(0.0),
     intent: str = Form("perceptual"),
 ):
     """Generate raw URF stream and return as downloadable file."""
@@ -203,6 +207,10 @@ async def post_export_raster(
             borderless=borderless,
             fit_mode=fit_mode,
             bleed_pct=bleed_pct,
+            comp_x_pct=comp_x_pct,
+            comp_y_pct=comp_y_pct,
+            offset_x_pct=offset_x_pct,
+            offset_y_pct=offset_y_pct,
             contrast=contrast,
         )
 
@@ -222,14 +230,18 @@ async def post_print(
     mode: str = Form("production"),  # "production" or "target"
     paper_profile_path: Optional[str] = Form(None),
     media_type: str = Form("luster"),
-    paper_size: str = Form("A4"),
+    paper_size: str = Form("10x15"),
     quality: str = Form("high"),
     ink_limit: float = Form(1.0),
     contrast: float = Form(0.0),
     backend: str = Form("cups_raw"),
-    borderless: bool = Form(False),
-    fit_mode: str = Form("fill"),
-    bleed_pct: float = Form(1.5),
+    borderless: bool = Form(True),
+    fit_mode: str = Form("compensate"),
+    bleed_pct: float = Form(0.0),
+    comp_x_pct: float = Form(2.7),
+    comp_y_pct: float = Form(5.0),
+    offset_x_pct: float = Form(0.0),
+    offset_y_pct: float = Form(0.0),
     intent: str = Form("perceptual"),
 ):
     """Execute raw IPP Print-Job directly to printer."""
@@ -244,7 +256,7 @@ async def post_print(
     use_intent = INTENT_PERCEPTUAL if intent == "perceptual" else INTENT_RELATIVE_COLORIMETRIC
     prof_path = None if paper_profile_path in ("none", "", None, "None") else paper_profile_path
     canon_media = CANON_MEDIA_TYPES.get(media_type.lower(), media_type)
-    page_spec = PAPER_SIZES.get(paper_size, PAPER_SIZES["A4"])
+    page_spec = PAPER_SIZES.get(paper_size, PAPER_SIZES["10x15"])
 
     if mode == "target":
         # Calibration Target Mode (1:1 zero color management)
@@ -267,6 +279,10 @@ async def post_print(
             borderless=borderless,
             fit_mode=fit_mode,
             bleed_pct=bleed_pct,
+            comp_x_pct=comp_x_pct,
+            comp_y_pct=comp_y_pct,
+            offset_x_pct=offset_x_pct,
+            offset_y_pct=offset_y_pct,
             contrast=contrast,
         )
         job_title = f"G640RIP-{file.filename}"

@@ -460,8 +460,9 @@
           <div style="flex: 1;">
             <label>Paper Size</label>
             <select id="paperSize">
-              <option value="A4" selected>A4 (210 &times; 297 mm)</option>
-              <option value="4x6">4&times;6" (10 &times; 15 cm)</option>
+              <option value="10x15" selected>10&times;15 cm (100 &times; 149 mm Postcard.Fullbleed)</option>
+              <option value="4x6">4&times;6" (101.6 &times; 152.4 mm)</option>
+              <option value="A4">A4 (210 &times; 297 mm)</option>
               <option value="5x7">5&times;7" (13 &times; 18 cm)</option>
               <option value="A5">A5 (148 &times; 210 mm)</option>
               <option value="Letter">Letter</option>
@@ -483,19 +484,36 @@
         <div class="form-row" id="framingRow" style="display: flex; gap: 8px;">
           <div style="flex: 1;">
             <label>Framing / Layout</label>
-            <select id="fitMode">
-              <option value="fill" selected>Fill Page (Crop to Edge)</option>
-              <option value="fit">Fit to Paper (No Crop)</option>
+            <select id="fitMode" onchange="updateFramingUI()">
+              <option value="compensate" selected>Compensate Hardware Bleed (100% Photo Saved)</option>
+              <option value="fill">Fill Page (Crop to Edge)</option>
+              <option value="fit">Fit to Paper (No Crop / Margins)</option>
               <option value="none">Original 1:1</option>
             </select>
           </div>
-          <div style="flex: 1;">
-            <label title="Overspray expansion to absorb mechanical paper feeder tolerances">Bleed Expansion</label>
+          <div style="flex: 1;" id="bleedCol" style="display: none;">
+            <label title="Overspray expansion for fill mode">Bleed Overspray</label>
             <select id="bleedExpansion">
-              <option value="1.5" selected>1.5% (Standard)</option>
+              <option value="0.0" selected>0.0% (Exact)</option>
+              <option value="1.5">1.5% (Standard)</option>
               <option value="2.5">2.5% (Max)</option>
-              <option value="0.0">0.0% (Exact)</option>
             </select>
+          </div>
+        </div>
+        <div class="form-row" id="compensationRow" style="display: flex; gap: 8px;">
+          <div style="flex: 1;">
+            <div class="label-wrap">
+              <label title="Compensate horizontal borderless crop">Compensate X (Right)</label>
+              <span class="val-badge" id="compXBadge">2.7%</span>
+            </div>
+            <input type="range" id="compXSlider" min="0" max="8" step="0.1" value="2.7" oninput="updateCompXBadge(this.value)">
+          </div>
+          <div style="flex: 1;">
+            <div class="label-wrap">
+              <label title="Compensate vertical borderless crop">Compensate Y (Bottom)</label>
+              <span class="val-badge" id="compYBadge">5.0%</span>
+            </div>
+            <input type="range" id="compYSlider" min="0" max="10" step="0.1" value="5.0" oninput="updateCompYBadge(this.value)">
           </div>
         </div>
       </div>
@@ -672,9 +690,25 @@
       document.getElementById('inkLimitBadge').innerText = val + '%';
     }
 
+    function updateCompXBadge(val) {
+      document.getElementById('compXBadge').innerText = val + '%';
+    }
+
+    function updateCompYBadge(val) {
+      document.getElementById('compYBadge').innerText = val + '%';
+    }
+
+    function updateFramingUI() {
+      const mode = document.getElementById('fitMode').value;
+      const isBorderless = document.getElementById('borderlessToggle').checked;
+      document.getElementById('compensationRow').style.display = (mode === 'compensate' && isBorderless) ? 'flex' : 'none';
+      document.getElementById('bleedCol').style.display = (mode === 'fill' && isBorderless) ? 'block' : 'none';
+    }
+
     function updateBorderlessUI() {
       const isBorderless = document.getElementById('borderlessToggle').checked;
       document.getElementById('framingRow').style.opacity = isBorderless ? '1.0' : '0.5';
+      updateFramingUI();
     }
 
     function loadSelectedFile(file) {
@@ -808,6 +842,10 @@
       fd.append('borderless', document.getElementById('borderlessToggle').checked);
       fd.append('fit_mode', document.getElementById('fitMode').value);
       fd.append('bleed_pct', parseFloat(document.getElementById('bleedExpansion').value));
+      fd.append('comp_x_pct', parseFloat(document.getElementById('compXSlider').value));
+      fd.append('comp_y_pct', parseFloat(document.getElementById('compYSlider').value));
+      fd.append('offset_x_pct', 0.0);
+      fd.append('offset_y_pct', 0.0);
       fd.append('intent', document.getElementById('renderingIntent').value);
       fd.append('contrast', parseFloat(document.getElementById('contrastBoost').value));
 
@@ -849,6 +887,10 @@
       fd.append('borderless', document.getElementById('borderlessToggle').checked);
       fd.append('fit_mode', document.getElementById('fitMode').value);
       fd.append('bleed_pct', parseFloat(document.getElementById('bleedExpansion').value));
+      fd.append('comp_x_pct', parseFloat(document.getElementById('compXSlider').value));
+      fd.append('comp_y_pct', parseFloat(document.getElementById('compYSlider').value));
+      fd.append('offset_x_pct', 0.0);
+      fd.append('offset_y_pct', 0.0);
       fd.append('intent', document.getElementById('renderingIntent').value);
       fd.append('contrast', parseFloat(document.getElementById('contrastBoost').value));
 

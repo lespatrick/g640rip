@@ -111,28 +111,34 @@ class ColorEngine:
     @staticmethod
     def prepare_image_layout(
         image: Image.Image,
-        page_size_name: str = "4x6",
+        page_size_name: str = "10x15",
         borderless: bool = True,
-        fit_mode: str = "fill",  # "fill" (crop to edge), "fit" (contain), or "none" (original)
-        bleed_pct: float = 1.5,  # 1.5% overspray for borderless to absorb mechanical paper feed tolerance
+        fit_mode: str = "compensate",  # "compensate" (100% safe area + edge buffer), "fill" (crop), "fit" (contain), "none"
+        bleed_pct: float = 0.0,
+        comp_x_pct: float = 2.7,
+        comp_y_pct: float = 5.0,
+        offset_x_pct: float = 0.0,
+        offset_y_pct: float = 0.0,
         auto_rotate: bool = True,
         dpi: int = 600,
     ) -> Image.Image:
         """
         Scale, auto-orient, and frame input image to exact target canvas dimensions at specified DPI.
 
-        For borderless:
-        - Canvas size exactly matches paper physical dimensions at 600 DPI (e.g. 2400x3600 for 4x6").
-        - If fit_mode == "fill": Image fills 100% of the canvas with optional slight bleed/overspray
-          so no white slivers appear on mechanical paper feed.
-        - If fit_mode == "fit": Image is scaled to fit within canvas with clean white margins.
+        Framing Modes:
+        - "compensate": Hardware Bleed Compensation. Scales image to fit printable safe area
+          (protecting the outer 2.7% X and 5.0% Y from being cut off by the printer's mechanical feed)
+          and replicates edge pixels into the overspray zone. 100% of the photo is preserved on paper!
+        - "fill": Scales to completely fill the canvas, center-cropping excess.
+        - "fit": Scales image to fit inside canvas with clean borders (letterbox/pillarbox).
+        - "none": Original 1:1 image placement without scaling.
         """
         if image.mode != "RGB":
             image = image.convert("RGB")
 
         spec = get_paper_spec(page_size_name)
-        canvas_w = spec.get("width_600dpi", 2400)
-        canvas_h = spec.get("height_600dpi", 3600)
+        canvas_w = spec.get("width_600dpi", 2362)
+        canvas_h = spec.get("height_600dpi", 3520)
         if dpi != 600:
             scale_factor = dpi / 600.0
             canvas_w = int(round(canvas_w * scale_factor))
@@ -158,7 +164,52 @@ class ColorEngine:
                 image = image.rotate(-90, expand=True)
                 img_w, img_h = image.size
 
-        if fit_mode == "fill":
+        if fit_mode == "compensate":
+            # Hardware Bleed Compensation:
+            # Pre-shrink image to compensate for Canon G640 hardware borderless expansion
+            shrink_w = float(np.clip(comp_x_pct / 100.0, 0.0, 0.15))
+            shrink_h = float(np.clip(comp_y_pct / 100.0, 0.0, 0.20))
+
+            safe_w = max(100, int(round(canvas_w * (1.0 - shrink_w))))
+            safe_h = max(100, int(round(canvas_h * (1.0 - shrink_h))))
+
+            scale = min(safe_w / img_w, safe_h / img_h)
+            inner_w = int(round(img_w * scale))
+            inner_h = int(round(img_h * scale))
+
+            inner_resized = image.resize((inner_w, inner_h), resample=Image.Resampling.LANCZOS)
+            inner_arr = np.array(inner_resized, dtype=np.uint8)
+
+            # Calculate placement with optional offset adjustment
+            base_x = (canvas_w - inner_w) // 2
+            base_y = (canvas_h - inner_h) // 2
+            shift_x = int(round((offset_x_pct / 100.0) * canvas_w))
+            shift_y = int(round((offset_y_pct / 100.0) * canvas_h))
+
+            paste_x = int(np.clip(base_x + shift_x, 0, canvas_w - inner_w))
+            paste_y = int(np.clip(base_y + shift_y, 0, canvas_h - inner_h))
+
+            # Create canvas and paste inner photo
+            canvas_arr = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
+            canvas_arr[paste_y : paste_y + inner_h, paste_x : paste_x + inner_w] = inner_arr
+
+            # Edge replication / clamp to fill overspray buffer:
+            # Top padding
+            if paste_y > 0:
+                canvas_arr[:paste_y, paste_x : paste_x + inner_w] = inner_arr[0:1, :]
+            # Bottom padding
+            if paste_y + inner_h < canvas_h:
+                canvas_arr[paste_y + inner_h :, paste_x : paste_x + inner_w] = inner_arr[-1:, :]
+            # Left padding (entire height)
+            if paste_x > 0:
+                canvas_arr[:, :paste_x] = canvas_arr[:, paste_x : paste_x + 1]
+            # Right padding (entire height)
+            if paste_x + inner_w < canvas_w:
+                canvas_arr[:, paste_x + inner_w :] = canvas_arr[:, paste_x + inner_w - 1 : paste_x + inner_w]
+
+            return Image.fromarray(canvas_arr, mode="RGB")
+
+        elif fit_mode == "fill":
             # Scale to completely fill canvas (crop excess)
             overspray = (bleed_pct / 100.0) if (borderless and bleed_pct > 0) else 0.0
             target_w = int(round(canvas_w * (1.0 + overspray)))
@@ -169,9 +220,13 @@ class ColorEngine:
             new_h = int(round(img_h * scale))
 
             resized = image.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
-            # Center crop to exact canvas_w x canvas_h
-            crop_x = (new_w - canvas_w) // 2
-            crop_y = (new_h - canvas_h) // 2
+            # Center crop with optional offset
+            base_crop_x = (new_w - canvas_w) // 2
+            base_crop_y = (new_h - canvas_h) // 2
+            shift_x = int(round((offset_x_pct / 100.0) * canvas_w))
+            shift_y = int(round((offset_y_pct / 100.0) * canvas_h))
+            crop_x = int(np.clip(base_crop_x + shift_x, 0, max(0, new_w - canvas_w)))
+            crop_y = int(np.clip(base_crop_y + shift_y, 0, max(0, new_h - canvas_h)))
             framed = resized.crop((crop_x, crop_y, crop_x + canvas_w, crop_y + canvas_h))
             return framed
 
@@ -218,8 +273,12 @@ class ColorEngine:
         image: Image.Image,
         page_size_name: Optional[str] = None,
         borderless: bool = False,
-        fit_mode: str = "fill",
-        bleed_pct: float = 1.5,
+        fit_mode: str = "compensate",
+        bleed_pct: float = 0.0,
+        comp_x_pct: float = 2.7,
+        comp_y_pct: float = 5.0,
+        offset_x_pct: float = 0.0,
+        offset_y_pct: float = 0.0,
         contrast: Optional[float] = None,
         input_profile_override: Optional[LCMS2Profile] = None,
     ) -> Image.Image:
@@ -241,6 +300,10 @@ class ColorEngine:
                 borderless=borderless,
                 fit_mode=fit_mode,
                 bleed_pct=bleed_pct,
+                comp_x_pct=comp_x_pct,
+                comp_y_pct=comp_y_pct,
+                offset_x_pct=offset_x_pct,
+                offset_y_pct=offset_y_pct,
             )
 
         # Step 1: Prepare 16-bit RGB buffer
