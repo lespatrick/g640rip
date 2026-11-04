@@ -26,3 +26,4 @@
 | **`everyday_glossy`** | `com.canon.mtglossy` | Canon Glossy Photo Paper (GP-501) |
 | **`hires`** | `com.canon.mthires` | Canon High Resolution Coated Paper (HR-101N) |
 | **`plain`** | `stationery` | Standard 80gsm Copy / Office Paper |
+

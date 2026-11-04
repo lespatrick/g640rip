@@ -115,3 +115,4 @@ lpstat -o
 
 - [Framing Modes & S-Curve Pipeline](./references/framing_modes.md)
 - [Supported Media Types & Paper Sizes](./references/media_and_sizes.md)
+

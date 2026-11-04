@@ -14,7 +14,8 @@ This skill provides the complete verification runbook and tooling to audit color
 
 | Task | Command |
 | :--- | :--- |
-| **Verify ICC Profile** | `python3 .agents/skills/color-verification/scripts/verify_profile.py <profile.icc>` |
+| **Verify Closed-Loop Print Scan** | `python3 .agents/skills/color-verification/scripts/verify_scan_reproduction.py --scan <scan.tif>` |
+| **Verify ICC Profile (Data vs Profile)** | `python3 .agents/skills/color-verification/scripts/verify_profile.py <profile.icc>` |
 | **Interactive 3D Gamut** | `python3 .agents/skills/color-verification/scripts/verify_profile.py <profile.icc> --html-gamut` |
 | **Argyll profcheck** | `profcheck -v2 -k targets/<target>.ti3 targets/<profile>.icc` |
 | **Soft Proof & Gamut Check** | `./g640rip_cli.py proof <image.tif> --profile targets/<profile>.icc --out-proof proof.png --out-gamut gamut.png` |
@@ -25,7 +26,25 @@ This skill provides the complete verification runbook and tooling to audit color
 
 ## Verification Workflows
 
-### 1. Numerical Profile Verification (Delta E & Gray Tracking)
+### 1. Closed-Loop Physical Print Verification (From Scan)
+
+When evaluating a verification target printed **WITH** an active ICC profile:
+
+```bash
+python3 .agents/skills/color-verification/scripts/verify_scan_reproduction.py \
+  --scan verification_scan.tif \
+  --ti2 targets/G640_10x15_80p_i1.ti2 \
+  --out-json targets/verification_residuals.json
+```
+
+- Samples all 88 patches from the 600 DPI scan.
+- Corrects for scanner optical flare and adapts to D50.
+- Compares measured physical print Lab against nominal target Lab from `.ti2`.
+- Outputs full CIEDE2000 statistics, neutral tracking, and exports residual vectors for iterative profile refinement.
+
+---
+
+### 2. Numerical Profile Verification (Data vs Profile)
 
 Run the verification tool on any generated ICC profile:
 

@@ -38,3 +38,4 @@ Where $\gamma = 1.0 + \text{contrast}$:
 - `0.15`: Medium contrast (+15% depth in portraits).
 - `0.25`: High contrast / deep blacks (+25% dynamic range for architecture/night photos).
 - **Zero Clipping Guarantee**: Pure black ($0$) and pure white ($1.0$) remain mathematically unclipped.
+

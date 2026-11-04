@@ -18,6 +18,7 @@ This skill provides the complete end-to-end runbook for generating custom ICC pa
 | **Print 160p Target (10x15)** | `./g640rip_cli.py print-target targets/G640_10x15_160p_i1_01.tif --media glossy --size 10x15` |
 | **Process Scan & Make ICC (100%)** | `python3 process_scan_and_make_icc.py --scan scan.tif --strength 1.0` |
 | **Process Scan & Make ICC (70% Blend)** | `python3 process_scan_and_make_icc.py --scan scan.tif --strength 0.70` |
+| **Iterative Profile Refinement** | `python3 .agents/skills/color-calibration/scripts/refine_icc_profile.py --residuals targets/verification_residuals.json` |
 | **Adjust Neutral Warmth** | `python3 process_scan_and_make_icc.py --scan scan.tif --strength 1.0 --bias-factor 0.50 --warmth 0.5` |
 | **Generate New Targets** | `.agents/skills/color-calibration/scripts/generate_targets.sh 80 10x15 MyTarget` |
 
@@ -108,6 +109,23 @@ Target benchmarks:
 - **Mean $\Delta E_{00} \le 0.80$**
 - **Max $\Delta E_{00} \le 2.50$**
 - **$D_{\max} \ge 2.20$** ($L^*_{\min} \le 4.5$)
+
+---
+
+### Step 6: Iterative Closed-Loop Refinement (Optional)
+If a verification scan reveals residual color discrepancies ($\Delta E_{00} > 1.2$):
+1. Run `verify_scan_reproduction.py` to calculate and export residual vectors:
+   ```bash
+   python3 .agents/skills/color-verification/scripts/verify_scan_reproduction.py --scan verification_scan.tif
+   ```
+2. Feed residuals into the refinement engine to compute negative feedback adjustments and re-synthesize the ICC profile:
+   ```bash
+   python3 .agents/skills/color-calibration/scripts/refine_icc_profile.py \
+     --base-ti3 targets/Canon_G640_10x15_Glossy2.ti3 \
+     --residuals targets/verification_residuals.json \
+     --rate 0.60
+   ```
+   The refined profile (e.g. `Canon_G640_10x15_Glossy2_iter1.icc`) is automatically built with `colprof` and installed to `~/Library/ColorSync/Profiles/`.
 
 ---
 
