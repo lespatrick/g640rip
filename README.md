@@ -85,7 +85,7 @@ flowchart TD
 
 ```bash
 # Clone and enter workspace
-git clone git@github.com:leszekbarszcz/g640RIP.git
+git clone git@github.com:lespatrick/g640RIP.git
 cd g640RIP
 
 # Setup virtual environment
