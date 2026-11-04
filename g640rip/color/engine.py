@@ -119,6 +119,8 @@ class ColorEngine:
         comp_y_pct: float = 5.0,
         offset_x_pct: float = 0.0,
         offset_y_pct: float = 0.0,
+        scale_x_pct: float = 0.0,
+        scale_y_pct: float = 0.0,
         auto_rotate: bool = True,
         dpi: int = 600,
     ) -> Image.Image:
@@ -146,15 +148,6 @@ class ColorEngine:
 
         img_w, img_h = image.size
 
-        if fit_mode == "none":
-            if img_w == canvas_w and img_h == canvas_h:
-                return image
-            canvas = Image.new("RGB", (canvas_w, canvas_h), (255, 255, 255))
-            paste_x = max(0, (canvas_w - img_w) // 2)
-            paste_y = max(0, (canvas_h - img_h) // 2)
-            canvas.paste(image, (paste_x, paste_y))
-            return canvas
-
         # Auto-rotate to match paper orientation (Canon G640 feeds short edge first)
         if auto_rotate:
             is_canvas_portrait = canvas_h >= canvas_w
@@ -164,33 +157,62 @@ class ColorEngine:
                 image = image.rotate(-90, expand=True)
                 img_w, img_h = image.size
 
+        scale_x_factor = 1.0 + (scale_x_pct / 100.0)
+        scale_y_factor = 1.0 + (scale_y_pct / 100.0)
+
+        if fit_mode == "none":
+            if scale_x_pct != 0.0 or scale_y_pct != 0.0:
+                new_w = max(1, int(round(img_w * scale_x_factor)))
+                new_h = max(1, int(round(img_h * scale_y_factor)))
+                image = image.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
+                img_w, img_h = image.size
+
+            if img_w == canvas_w and img_h == canvas_h and offset_x_pct == 0.0 and offset_y_pct == 0.0:
+                return image
+
+            canvas = Image.new("RGB", (canvas_w, canvas_h), (255, 255, 255))
+            shift_x = int(round((offset_x_pct / 100.0) * canvas_w))
+            shift_y = int(round((offset_y_pct / 100.0) * canvas_h))
+            paste_x = max(0, (canvas_w - img_w) // 2 + shift_x)
+            paste_y = max(0, (canvas_h - img_h) // 2 + shift_y)
+            canvas.paste(image, (paste_x, paste_y))
+            return canvas
+
         if fit_mode == "compensate":
             # Hardware Bleed Compensation:
-            # - Horizontal (width): Authentic photo ALWAYS covers 100% of canvas_w (scale >= canvas_w / img_w).
-            #   Completely eliminates repeated pixels: 0 repeated pixels on left, 0 repeated pixels on right.
-            # - Vertical (height): Protects the bottom from printer mechanical feed roller cut-off (comp_y_pct).
-            #   Bottom of the photo is aligned to safe_h, with overspray buffer below it absorbing the physical cut.
+            # - Horizontal (width): Authentic photo covers 100% of canvas_w with calibrated hardware scaling.
+            # - Vertical (height): Protects bottom from mechanical feed cut-off (comp_y_pct).
             shrink_h = float(np.clip(comp_y_pct / 100.0, 0.0, 0.20))
             safe_h = max(100, int(round(canvas_h * (1.0 - shrink_h))))
 
-            # Uniform scaling guaranteeing real photo covers full width and safe height
-            scale = max(canvas_w / img_w, safe_h / img_h)
-            inner_w = int(round(img_w * scale))
-            inner_h = int(round(img_h * scale))
+            # Uniform base scaling guaranteeing real photo covers full width and safe height
+            base_scale = max(canvas_w / img_w, safe_h / img_h)
+            inner_w = max(1, int(round(img_w * base_scale * scale_x_factor)))
+            inner_h = max(1, int(round(img_h * base_scale * scale_y_factor)))
 
             inner_resized = image.resize((inner_w, inner_h), resample=Image.Resampling.LANCZOS)
 
-            # Horizontal placement: center-crop with optional offset, guaranteed inner_w >= canvas_w
+            # Horizontal placement with offset
             shift_x = int(round((offset_x_pct / 100.0) * canvas_w))
-            base_crop_x = (inner_w - canvas_w) // 2
-            crop_x = int(np.clip(base_crop_x + shift_x, 0, max(0, inner_w - canvas_w)))
-            inner_resized = inner_resized.crop((crop_x, 0, crop_x + canvas_w, inner_h))
+            if inner_w >= canvas_w:
+                base_crop_x = (inner_w - canvas_w) // 2
+                crop_x = int(np.clip(base_crop_x + shift_x, 0, max(0, inner_w - canvas_w)))
+                inner_w_cropped = inner_resized.crop((crop_x, 0, crop_x + canvas_w, inner_h))
+            else:
+                inner_w_cropped = Image.new("RGB", (canvas_w, inner_h), (255, 255, 255))
+                pad_x = max(0, (canvas_w - inner_w) // 2 + shift_x)
+                inner_w_cropped.paste(inner_resized, (pad_x, 0))
 
-            # Vertical placement: align bottom to safe_h to protect bottom edge from mechanical feed cut-off
+            # Vertical placement with offset
             shift_y = int(round((offset_y_pct / 100.0) * canvas_h))
-            base_crop_y = max(0, inner_h - safe_h)
-            crop_y = int(np.clip(base_crop_y + shift_y, 0, max(0, inner_h - safe_h)))
-            inner_cropped = inner_resized.crop((0, crop_y, canvas_w, crop_y + safe_h))
+            if inner_h >= safe_h:
+                base_crop_y = max(0, inner_h - safe_h)
+                crop_y = int(np.clip(base_crop_y + shift_y, 0, max(0, inner_h - safe_h)))
+                inner_cropped = inner_w_cropped.crop((0, crop_y, canvas_w, crop_y + safe_h))
+            else:
+                inner_cropped = Image.new("RGB", (canvas_w, safe_h), (255, 255, 255))
+                pad_y = max(0, safe_h - inner_h + shift_y)
+                inner_cropped.paste(inner_w_cropped, (0, pad_y))
 
             # Build canvas: real photo fills columns 0..canvas_w and rows 0..safe_h
             canvas_arr = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
@@ -208,12 +230,11 @@ class ColorEngine:
             target_w = int(round(canvas_w * (1.0 + overspray)))
             target_h = int(round(canvas_h * (1.0 + overspray)))
 
-            scale = max(target_w / img_w, target_h / img_h)
-            new_w = int(round(img_w * scale))
-            new_h = int(round(img_h * scale))
+            base_scale = max(target_w / img_w, target_h / img_h)
+            new_w = max(1, int(round(img_w * base_scale * scale_x_factor)))
+            new_h = max(1, int(round(img_h * base_scale * scale_y_factor)))
 
             resized = image.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
-            # Center crop with optional offset
             base_crop_x = (new_w - canvas_w) // 2
             base_crop_y = (new_h - canvas_h) // 2
             shift_x = int(round((offset_x_pct / 100.0) * canvas_w))
@@ -225,16 +246,20 @@ class ColorEngine:
 
         elif fit_mode == "fit":
             # Scale to fit inside canvas (no cropping, letterbox/pillarbox)
-            scale = min(canvas_w / img_w, canvas_h / img_h)
-            new_w = int(round(img_w * scale))
-            new_h = int(round(img_h * scale))
+            base_scale = min(canvas_w / img_w, canvas_h / img_h)
+            new_w = max(1, int(round(img_w * base_scale * scale_x_factor)))
+            new_h = max(1, int(round(img_h * base_scale * scale_y_factor)))
 
             resized = image.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
             canvas = Image.new("RGB", (canvas_w, canvas_h), (255, 255, 255))
-            paste_x = (canvas_w - new_w) // 2
-            paste_y = (canvas_h - new_h) // 2
+            shift_x = int(round((offset_x_pct / 100.0) * canvas_w))
+            shift_y = int(round((offset_y_pct / 100.0) * canvas_h))
+            paste_x = max(0, (canvas_w - new_w) // 2 + shift_x)
+            paste_y = max(0, (canvas_h - new_h) // 2 + shift_y)
             canvas.paste(resized, (paste_x, paste_y))
             return canvas
+
+        return image
 
         return image
 
@@ -272,6 +297,8 @@ class ColorEngine:
         comp_y_pct: float = 5.0,
         offset_x_pct: float = 0.0,
         offset_y_pct: float = 0.0,
+        scale_x_pct: float = 0.0,
+        scale_y_pct: float = 0.0,
         contrast: Optional[float] = None,
         input_profile_override: Optional[LCMS2Profile] = None,
     ) -> Image.Image:
@@ -297,6 +324,8 @@ class ColorEngine:
                 comp_y_pct=comp_y_pct,
                 offset_x_pct=offset_x_pct,
                 offset_y_pct=offset_y_pct,
+                scale_x_pct=scale_x_pct,
+                scale_y_pct=scale_y_pct,
             )
 
         # Step 1: Prepare 16-bit RGB buffer

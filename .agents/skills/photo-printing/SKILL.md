@@ -46,6 +46,10 @@ To achieve borderless edge-to-edge printing **without cropping feet or details f
 * `--borderless` (`-b`): Enables Canon hardware Fullbleed mode (`Postcard.Fullbleed` / `4x6.Fullbleed`).
 * `--fit-mode compensate`: Guarantees real image pixels cover 100% of the paper width (**zero repeated pixels on left and right**), while aligning the bottom to protect against mechanical feed cut-off.
 * `--comp-y 5.0`: Sets 5.0% bottom feed roller safety margin.
+* `--scale-x -1.0`: Hardware width scaling correction percent (calibrated from QA strip: fixes +1.0% carriage stretch).
+* `--scale-y +0.59`: Hardware feed length scaling correction percent (calibrated from QA strip: fixes -0.58% roller compression).
+* `--offset-x -0.25`: Horizontal centering shift percent.
+* `--offset-y -1.59`: Vertical feed centering shift percent.
 * `--contrast 0.10`: Subtle S-curve photographic contrast boost (prevents dullness under gallery lighting).
 * `--backend cups_raw`: Uses macOS background spooler (`-o raw`), preventing IPP socket timeouts during slow high-density photo passes.
 

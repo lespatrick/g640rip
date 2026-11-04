@@ -183,7 +183,7 @@ def cmd_print(args):
         use_bpc=not args.no_bpc,
     )
 
-    console.print(f"[cyan]Executing 16-bit color transform & layout (size={args.size}, borderless={args.borderless}, fit={args.fit_mode}, comp=X:{args.comp_x}%/Y:{args.comp_y}%, contrast={args.contrast:+.2f})...[/cyan]")
+    console.print(f"[cyan]Executing 16-bit color transform & layout (size={args.size}, borderless={args.borderless}, fit={args.fit_mode}, scale=X:{args.scale_x:+.2f}%/Y:{args.scale_y:+.2f}%, offset=X:{args.offset_x:+.2f}%/Y:{args.offset_y:+.2f}%, comp=X:{args.comp_x}%/Y:{args.comp_y}%, contrast={args.contrast:+.2f})...[/cyan]")
     processed_img = engine.process_production_image(
         img,
         page_size_name=args.size,
@@ -194,6 +194,8 @@ def cmd_print(args):
         comp_y_pct=args.comp_y,
         offset_x_pct=args.offset_x,
         offset_y_pct=args.offset_y,
+        scale_x_pct=args.scale_x,
+        scale_y_pct=args.scale_y,
         contrast=args.contrast,
     )
 
@@ -347,8 +349,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_prnt.add_argument("--bleed", type=float, default=0.0, help="Bleed expansion overspray percentage for fill mode (default: 0.0%%)")
     p_prnt.add_argument("--comp-x", type=float, default=0.0, help="Horizontal hardware bleed compensation percent (default: 0.0%%)")
     p_prnt.add_argument("--comp-y", type=float, default=5.0, help="Vertical hardware bleed compensation percent (default: 5.0%%)")
-    p_prnt.add_argument("--offset-x", type=float, default=0.0, help="Horizontal shift percent [-5.0 to +5.0] (default: 0.0)")
-    p_prnt.add_argument("--offset-y", type=float, default=0.0, help="Vertical shift percent [-5.0 to +5.0] (default: 0.0)")
+    p_prnt.add_argument("--scale-x", type=float, default=-1.0, help="Hardware width scaling correction percent (default: -1.0%% for G640 10x15)")
+    p_prnt.add_argument("--scale-y", type=float, default=0.59, help="Hardware feed length scaling correction percent (default: +0.59%% for G640 10x15)")
+    p_prnt.add_argument("--offset-x", type=float, default=-0.25, help="Horizontal shift percent [-5.0 to +5.0] (default: -0.25%% for G640 10x15)")
+    p_prnt.add_argument("--offset-y", type=float, default=-1.59, help="Vertical feed shift percent [-5.0 to +5.0] (default: -1.59%% for G640 10x15)")
     p_prnt.add_argument("--quality", default="high", choices=["draft", "normal", "high"], help="Print quality")
     p_prnt.add_argument("--printer-uri", help="Target printer IPP URL")
     p_prnt.add_argument("--backend", default="cups_raw", choices=["cups_raw", "direct_ipp"], help="Transport backend (default: cups_raw)")

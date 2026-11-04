@@ -97,6 +97,23 @@ class TestBorderless(unittest.TestCase):
         self.assertTrue(np.array_equal(arr[safe_h, :], arr[safe_h - 1, :]))
         self.assertTrue(np.array_equal(arr[-1, :], arr[safe_h - 1, :]))
 
+    def test_layout_hardware_scaling_and_offset(self):
+        # Test that hardware scaling factors and offsets apply cleanly
+        img = Image.new("RGB", (2362, 3520), color=(100, 150, 200))
+        framed = ColorEngine.prepare_image_layout(
+            img,
+            page_size_name="10x15",
+            borderless=True,
+            fit_mode="compensate",
+            scale_x_pct=-1.0,
+            scale_y_pct=0.59,
+            offset_x_pct=-0.25,
+            offset_y_pct=-1.59,
+            dpi=600,
+        )
+        self.assertEqual(framed.size, (2362, 3520))
+
+
 
 if __name__ == "__main__":
     unittest.main()
