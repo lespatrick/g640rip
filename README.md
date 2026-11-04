@@ -81,12 +81,30 @@ flowchart TD
 
 ## Quick Start
 
-### 1. Environment Setup
+### Installation & Execution Options
+
+#### Option A: Pre-compiled Standalone Binary (Recommended)
+
+No Python setup or virtual environment required. Download the pre-built Apple Silicon (`arm64`) executable from [GitHub Releases](https://github.com/lespatrick/g640rip/releases):
+
+```bash
+# Extract the downloaded archive
+tar -xzvf g640rip-macos-arm64-v*.tar.gz
+chmod +x g640rip
+
+# Verify execution
+./g640rip --help
+```
+
+> [!NOTE]
+> **ICC Profiles are External**: Custom ICC paper profiles are **never embedded** inside the binary. The binary dynamically loads profiles from your local `targets/` directory (e.g. `targets/<profile>.icc`) or macOS system profile folders (`~/Library/ColorSync/Profiles`). Users have full freedom to add, swap, and calibrate their own paper profiles without modifying the executable.
+
+#### Option B: Run from Source (Python)
 
 ```bash
 # Clone and enter workspace
-git clone git@github.com:lespatrick/g640RIP.git
-cd g640RIP
+git clone git@github.com:lespatrick/g640rip.git
+cd g640rip
 
 # Setup virtual environment
 python3 -m venv --system-site-packages .venv
@@ -94,17 +112,21 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Discover the Printer
+*(Note: In all examples below, `./g640rip` [standalone binary] and `./g640rip_cli.py` [source] can be used interchangeably).*
+
+---
+
+### 1. Discover the Printer
 
 ```bash
-./g640rip_cli.py discover
+./g640rip discover
 ```
 *Discovers Canon G640 printers via Bonjour mDNS and checks local CUPS print queues.*
 
-### 3. Print a Borderless 4x6" Photo
+### 2. Print a Borderless 4x6" Photo
 
 ```bash
-./g640rip_cli.py print my_photo.jpg \
+./g640rip print my_photo.jpg \
   --size 4x6 \
   --media glossy \
   --profile targets/<profile>.icc \
@@ -425,7 +447,7 @@ lpstat -p Canon_G600_series -o
 ## CLI Reference
 
 ```
-usage: g640rip_cli.py [-h] {gui,discover,attributes,print-target,print,proof,serve,cancel} ...
+usage: g640rip [-h] {gui,discover,attributes,print-target,print,proof,serve,cancel} ...
 
 commands:
   gui            Launch native macOS Desktop GUI window

@@ -6,3 +6,4 @@ uvicorn>=0.22.0
 python-multipart>=0.0.6
 pywebview>=4.0.0
 pyinstaller>=6.0.0
+

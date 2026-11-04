@@ -130,3 +130,4 @@ jobs:
             g640rip-macos-arm64-${{ env.VERSION }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
