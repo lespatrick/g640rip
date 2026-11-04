@@ -160,81 +160,88 @@ def ciede2000(lab1: np.ndarray, lab2: np.ndarray, kL: float = 1.0, kC: float = 1
 
 def sample_scan_patches(scan_path: str, flare: float = 0.52) -> Dict[str, Dict[str, Any]]:
     """
-    Robustly detect and sample 8x11 patch grid from 600 DPI chart scan.
-    Dynamically registers chart grid regardless of whether the scan was
-    tightly cropped or full scanner bed, and automatically selects correct orientation.
+    Robustly detect and sample 8x11 patch grid from 600 DPI chart scan using
+    correlation template matching against known Argyll 80-patch fiducial anchors.
+    Flawlessly handles:
+    - Tight crops (e.g. 1568x2968)
+    - Full-bed scans with borders/text (e.g. 2336x3472)
+    - Arbitrary rotations (0° / 180° / 90° / 270°)
     """
     scan_img = Image.open(scan_path)
     if scan_img.width > scan_img.height:
         scan_img = scan_img.rotate(90, expand=True)
 
     strip_names = ["A", "B", "C", "D", "E", "F", "G", "H"]
+    dx = 189.0
+    dy = 260.2
 
-    best_rot = 180
-    best_contrast = -9999.0
-    best_cols = None
-    best_rows = None
-    best_arr = None
+    # Argyll 80p anchor indices (col_idx 0..7, row_idx 0..10)
+    # Known white patches: H3 (7, 2), G6 (6, 5), D4 (3, 3), E7 (4, 6)
+    # Known black patches: B1 (1, 0), C4 (2, 3), H4 (7, 3), C11 (2, 10)
+    whites_idx = [(7, 2), (6, 5), (3, 3), (4, 6)]
+    blacks_idx = [(1, 0), (2, 3), (7, 3), (2, 10)]
 
-    # Test 180 and 0 orientations to match Argyll 80p layout
+    best_config = None
+    best_score = -1e9
+    best_img = None
+
+    # Step 1: Coarse grid search over orientation and origin offset
     for rot in [180, 0]:
         t_img = scan_img.rotate(rot, expand=True)
-        arr = np.array(t_img)
-        gray = np.dot(arr[..., :3], [0.299, 0.587, 0.114])
+        gray = np.dot(np.array(t_img)[..., :3], [0.299, 0.587, 0.114])
+        h, w = gray.shape
 
-        col_std = np.std(gray, axis=0)
-        row_std = np.std(gray, axis=1)
+        x0_min = 10
+        x0_max = max(20, w - int(7 * dx) - 20)
+        y0_min = 10
+        y0_max = max(20, h - int(10 * dy) - 20)
 
-        active_cols = np.where(col_std > 12)[0]
-        active_rows = np.where(row_std > 12)[0]
+        # Coarse step of 8 pixels
+        for y0 in range(y0_min, y0_max, 8):
+            for x0 in range(x0_min, x0_max, 8):
+                w_vals = [gray[int(y0 + r * dy), int(x0 + c * dx)] for c, r in whites_idx]
+                b_vals = [gray[int(y0 + r * dy), int(x0 + c * dx)] for c, r in blacks_idx]
+                score = np.mean(w_vals) - np.mean(b_vals)
+                if score > best_score:
+                    best_score = score
+                    best_config = (rot, x0, y0, score)
+                    best_img = t_img
 
-        if len(active_cols) < 50 or len(active_rows) < 50:
-            continue
+    if best_config is None or best_score < 100.0:
+        raise ValueError(f"Could not reliably register Argyll 80-patch target in {scan_path} (score: {best_score:.1f})")
 
-        x_min, x_max = active_cols[0], active_cols[-1]
-        y_min, y_max = active_rows[0], active_rows[-1]
+    # Step 2: Fine-tune origin with step of 2 pixels
+    rot, x0, y0, score = best_config
+    gray = np.dot(np.array(best_img)[..., :3], [0.299, 0.587, 0.114])
+    best_fine = best_config
+    for dy_offset in range(-12, 13, 2):
+        for dx_offset in range(-12, 13, 2):
+            cur_x0 = x0 + dx_offset
+            cur_y0 = y0 + dy_offset
+            w_vals = [gray[int(cur_y0 + r * dy), int(cur_x0 + c * dx)] for c, r in whites_idx]
+            b_vals = [gray[int(cur_y0 + r * dy), int(cur_x0 + c * dx)] for c, r in blacks_idx]
+            cur_score = np.mean(w_vals) - np.mean(b_vals)
+            if cur_score > best_fine[3]:
+                best_fine = (rot, cur_x0, cur_y0, cur_score)
 
-        col_w = (x_max - x_min) / 8.0
-        row_h = (y_max - y_min) / 11.0
-
-        cols = [int(x_min + (i + 0.5) * col_w) for i in range(8)]
-        rows = [int(y_min + (j + 0.5) * row_h) for j in range(11)]
-
-        # Argyll 80-patch target fiducial checks:
-        # Known white patches: H3 (col 7, row 2), G6 (col 6, row 5), D4 (col 3, row 3)
-        # Known black patches: B1 (col 1, row 0), C4 (col 2, row 3), H4 (col 7, row 3)
-        whites = [gray[rows[2], cols[7]], gray[rows[5], cols[6]], gray[rows[3], cols[3]]]
-        blacks = [gray[rows[0], cols[1]], gray[rows[3], cols[2]], gray[rows[3], cols[7]]]
-
-        contrast = float(np.mean(whites) - np.mean(blacks))
-        if contrast > best_contrast:
-            best_contrast = contrast
-            best_rot = rot
-            best_cols = cols
-            best_rows = rows
-            best_arr = arr
-
-    if best_cols is None or best_rows is None:
-        raise ValueError(f"Could not reliably detect 80-patch chart grid in scan: {scan_path}")
-
-    # Fallback to standard coordinates if dynamic detection fails sanity check
+    rot, x0, y0, score = best_fine
+    arr = np.array(best_img)
     sample_r = 25
-    h_arr, w_arr = best_arr.shape[:2]
+    h_arr, w_arr = arr.shape[:2]
 
     patch_measurements = {}
-    for r_idx, cy in enumerate(best_rows):
-        for c_idx, cx in enumerate(best_cols):
+    for r_idx in range(11):
+        for c_idx in range(8):
             loc = f"{strip_names[c_idx]}{r_idx+1}"
-            
+            cx = int(x0 + c_idx * dx)
+            cy = int(y0 + r_idx * dy)
+
             y1 = max(0, cy - sample_r)
             y2 = min(h_arr, cy + sample_r)
             x1 = max(0, cx - sample_r)
             x2 = min(w_arr, cx + sample_r)
-            
-            box = best_arr[y1:y2, x1:x2]
-            if box.size == 0:
-                raise ValueError(f"Sample patch {loc} out of bounds: ({x1}:{x2}, {y1}:{y2}) in {w_arr}x{h_arr}")
 
+            box = arr[y1:y2, x1:x2]
             pixels = box.reshape(-1, 3)
             rgb_mean = np.zeros(3)
             for ch in range(3):
