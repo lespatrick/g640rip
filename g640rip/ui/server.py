@@ -92,9 +92,11 @@ async def get_profiles():
 
 @app.get("/api/media-options")
 async def get_media_options():
+    # Standard sizes without 10x15, with 4x6 as default
+    sizes = [p for p in ["4x6", "A4", "5x7", "A5", "Letter"] if p in PAPER_SIZES]
     return {
         "media_types": CANON_MEDIA_TYPES,
-        "paper_sizes": list(PAPER_SIZES.keys()),
+        "paper_sizes": sizes,
         "qualities": ["high", "normal", "draft"],
     }
 
@@ -164,8 +166,8 @@ async def post_export_raster(
     file: UploadFile = File(...),
     mode: str = Form("production"),
     paper_profile_path: Optional[str] = Form(None),
-    media_type: str = Form("luster"),
-    paper_size: str = Form("10x15"),
+    media_type: str = Form("glossy"),
+    paper_size: str = Form("4x6"),
     quality: str = Form("high"),
     ink_limit: float = Form(1.0),
     contrast: float = Form(0.0),
@@ -174,9 +176,11 @@ async def post_export_raster(
     bleed_pct: float = Form(0.0),
     comp_x_pct: float = Form(0.0),
     comp_y_pct: float = Form(5.0),
-    offset_x_pct: float = Form(0.0),
-    offset_y_pct: float = Form(0.0),
-    intent: str = Form("perceptual"),
+    scale_x_pct: float = Form(-1.0),
+    scale_y_pct: float = Form(0.59),
+    offset_x_pct: float = Form(-0.25),
+    offset_y_pct: float = Form(-1.59),
+    intent: str = Form("rel_col"),
 ):
     """Generate raw URF stream and return as downloadable file."""
     contents = await file.read()
@@ -211,6 +215,8 @@ async def post_export_raster(
             comp_y_pct=comp_y_pct,
             offset_x_pct=offset_x_pct,
             offset_y_pct=offset_y_pct,
+            scale_x_pct=scale_x_pct,
+            scale_y_pct=scale_y_pct,
             contrast=contrast,
         )
 
@@ -229,8 +235,8 @@ async def post_print(
     printer_uri: str = Form(...),
     mode: str = Form("production"),  # "production" or "target"
     paper_profile_path: Optional[str] = Form(None),
-    media_type: str = Form("luster"),
-    paper_size: str = Form("10x15"),
+    media_type: str = Form("glossy"),
+    paper_size: str = Form("4x6"),
     quality: str = Form("high"),
     ink_limit: float = Form(1.0),
     contrast: float = Form(0.0),
@@ -240,9 +246,11 @@ async def post_print(
     bleed_pct: float = Form(0.0),
     comp_x_pct: float = Form(0.0),
     comp_y_pct: float = Form(5.0),
-    offset_x_pct: float = Form(0.0),
-    offset_y_pct: float = Form(0.0),
-    intent: str = Form("perceptual"),
+    scale_x_pct: float = Form(-1.0),
+    scale_y_pct: float = Form(0.59),
+    offset_x_pct: float = Form(-0.25),
+    offset_y_pct: float = Form(-1.59),
+    intent: str = Form("rel_col"),
 ):
     """Execute raw IPP Print-Job directly to printer."""
     contents = await file.read()
@@ -256,7 +264,7 @@ async def post_print(
     use_intent = INTENT_PERCEPTUAL if intent == "perceptual" else INTENT_RELATIVE_COLORIMETRIC
     prof_path = None if paper_profile_path in ("none", "", None, "None") else paper_profile_path
     canon_media = CANON_MEDIA_TYPES.get(media_type.lower(), media_type)
-    page_spec = PAPER_SIZES.get(paper_size, PAPER_SIZES["10x15"])
+    page_spec = PAPER_SIZES.get(paper_size, PAPER_SIZES["4x6"])
 
     if mode == "target":
         # Calibration Target Mode (1:1 zero color management)
@@ -283,6 +291,8 @@ async def post_print(
             comp_y_pct=comp_y_pct,
             offset_x_pct=offset_x_pct,
             offset_y_pct=offset_y_pct,
+            scale_x_pct=scale_x_pct,
+            scale_y_pct=scale_y_pct,
             contrast=contrast,
         )
         job_title = f"G640RIP-{file.filename}"

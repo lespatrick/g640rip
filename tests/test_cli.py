@@ -65,6 +65,20 @@ class TestCLI(unittest.TestCase):
             header = f.read(8)
             self.assertEqual(header, b"UNIRAST\0")
 
+    def test_ui_media_options_paper_sizes(self):
+        try:
+            from fastapi.testclient import TestClient
+            from g640rip.ui.server import app
+            client = TestClient(app)
+            resp = client.get("/api/media-options")
+            self.assertEqual(resp.status_code, 200)
+            sizes = resp.json().get("paper_sizes", [])
+            self.assertIn("4x6", sizes)
+            self.assertNotIn("10x15", sizes)
+            self.assertEqual(sizes[0], "4x6")
+        except ImportError:
+            pass
+
 
 if __name__ == "__main__":
     unittest.main()
