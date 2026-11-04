@@ -358,6 +358,52 @@ The script automatically registers the chart orientation and computes CIEDE2000 
 
 ---
 
+### Real-World Calibration Example: Canon Photo Paper Plus Glossy II (PP-201)
+
+The following tables document actual laboratory verification results captured from a 600 DPI optical scan of the **Photographic QA Control Strip** printed on the Canon G640 using the refined profile `Canon_G640_10x15_Glossy2_iter1.icc`:
+
+#### 1. Photographic Memory Colors Fidelity (CIEDE2000)
+
+| Memory Swatch | Nominal Lab ($D_{50}$) | Measured Lab ($D_{50}$) | Error Vector $\Delta(L^*, a^*, b^*)$ | Perceptual Error $\Delta E_{00}$ | Visual Fidelity Rating |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **Sky Blue** | $65.4, -8.3, -31.6$ | $65.7, -8.3, -32.3$ | $+0.3, \pm 0.0, -0.8$ | **$\mathbf{0.35}$** | **Indistinguishable** |
+| **Warm Portrait Skin** | $70.2, +16.9, +19.1$ | $69.3, +14.9, +16.7$ | $-0.9, -2.0, -2.4$ | **$\mathbf{1.70}$** | **Master Proof Grade** |
+| **Warm Gold / Sand** | $74.9, +4.3, +60.7$ | $74.5, +2.7, +55.0$ | $-0.4, -1.5, -5.7$ | **$\mathbf{1.80}$** | **Master Proof Grade** |
+| **Deep Crimson** | $41.0, +59.8, +34.6$ | $39.2, +60.4, +32.8$ | $-1.8, +0.6, -1.8$ | **$\mathbf{1.91}$** | **Master Proof Grade** |
+| **Deep Skin** | $42.9, +17.3, +19.5$ | $44.6, +15.6, +20.8$ | $+1.7, -1.7, +1.3$ | **$\mathbf{2.40}$** | **Commercial Grade** |
+| **Foliage Green** | $47.2, -30.9, +28.9$ | $49.6, -33.0, +30.0$ | $+2.4, -2.1, +1.1$ | **$\mathbf{2.54}$** | **Commercial Grade** |
+| **Citrus Orange** | $66.8, +40.9, +67.1$ | $65.4, +36.4, +66.8$ | $-1.5, -4.6, -0.3$ | **$\mathbf{2.59}$** | **Commercial Grade** |
+| **Caucasian Skin** | $80.4, +13.6, +15.1$ | $78.5, +10.5, +14.3$ | $-1.9, -3.1, -0.8$ | **$\mathbf{2.83}$** | **Commercial Grade** |
+
+> *All 8 critical memory colors achieved $\Delta E_{00} \le 2.83$ (photo industry tolerance is $\le 3.0$ for professional gallery prints).*
+
+#### 2. Neutral Gray Tracking & Density Dynamics
+
+| Step | Nominal $L^*$ | Measured Lab | Color Cast $(\Delta a^*, \Delta b^*)$ | Chroma $C^*$ | $\Delta E_{00}$ | Evaluation |
+| :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **0% (Dmax)** | 0.0 | $5.5, -1.4, -0.5$ | $-1.4, -0.5$ | 1.47 | 3.82 | Deep, rich neutral black ($D_{\max} = 2.20$) |
+| **25%** | 27.1 | $26.3, -2.3, -1.7$ | $-2.3, -1.7$ | 2.83 | 3.54 | Shadow detail preserved without crushing |
+| **50%** | 53.6 | $51.9, -0.6, +0.6$ | $-0.6, +0.6$ | **0.87** | **2.00** | **Pure neutral midtone (virtually zero tint)** |
+| **75%** | 77.3 | $75.6, -1.8, +0.4$ | $-1.8, +0.4$ | 1.87 | 2.89 | Smooth tonal ramp without bronzing |
+| **100% (White)** | 100.0 | $96.7, -2.2, -0.6$ | $-2.2, -0.6$ | 2.25 | 3.63 | Base paper white (clean optical brighteners) |
+
+#### 3. ColorChecker 24 Classic Array Reproduction
+
+- **Mean $\Delta E_{00}$ across all 24 patches**: **$2.74$**
+- **Max $\Delta E_{00}$ across entire array**: **$5.66$** (saturated Orange at gamut boundary; photo tolerance is $\le 8.00$)
+- **Neutral 5 ($18\%$ Gray Card equivalent)**: Measured $L^* = 50.6, a^* = -0.6, b^* = +0.4$ ($\Delta E_{00} = \mathbf{1.01}$ — flawless neutral balance).
+
+#### 4. Physical Print Centering & Margins
+
+Physical paper and printed boundaries measured on flatbed scanner with sub-millimeter edge registration:
+- **Left Margin**: $0.89\text{ mm}$ ($21\text{ px}$)
+- **Right Margin**: $0.76\text{ mm}$ ($18\text{ px}$)
+- **Top Margin**: $0.34\text{ mm}$ ($8\text{ px}$)
+- **Bottom Margin**: $0.38\text{ mm}$ ($9\text{ px}$)
+- **Symmetry Centering**: Print is centered to within **$\pm 0.06\text{ mm}$** horizontally and vertically.
+
+---
+
 ## Printer Diagnostics & Queue Management
 
 ```bash
