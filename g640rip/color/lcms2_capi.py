@@ -13,11 +13,15 @@ import numpy as np
 
 def _find_liblcms2() -> str:
     """Locate liblcms2 dynamic library on macOS."""
-    # Check bundled Pillow dylib
+    meipass = getattr(sys, "_MEIPASS", None)
     candidates = [
+        # PyInstaller bundled location
+        os.path.join(meipass, "liblcms2.2.dylib") if meipass else None,
+        os.path.join(meipass, "liblcms2.dylib") if meipass else None,
         # Pillow bundled dylib (Homebrew python)
         os.path.join(sys.prefix, "lib", "python3.14", "site-packages", "PIL", ".dylibs", "liblcms2.2.dylib"),
         os.path.expanduser("~/.local/lib/liblcms2.2.dylib"),
+        "/opt/homebrew/opt/little-cms2/lib/liblcms2.dylib",
         "/opt/homebrew/lib/liblcms2.dylib",
         "/usr/local/lib/liblcms2.dylib",
     ]
@@ -31,7 +35,7 @@ def _find_liblcms2() -> str:
         pass
 
     for path in candidates:
-        if os.path.exists(path):
+        if path and os.path.exists(path):
             return path
 
     raise RuntimeError(f"Could not find liblcms2 dylib in candidates: {candidates}")

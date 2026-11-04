@@ -1,0 +1,132 @@
+name: Release Binary
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump level (patch, minor, major)'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          brew install little-cms2
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: |
+          python -m unittest discover tests
+
+      - name: Bump version & tag
+        id: bump
+        run: |
+          # Determine bump type from commit message or input
+          BUMP_TYPE="${{ github.event.inputs.bump_type }}"
+          if [ -z "$BUMP_TYPE" ]; then
+            COMMIT_MSG="${{ github.event.head_commit.message }}"
+            if echo "$COMMIT_MSG" | grep -iq "\[major\]"; then
+              BUMP_TYPE="major"
+            elif echo "$COMMIT_MSG" | grep -iq "\[minor\]"; then
+              BUMP_TYPE="minor"
+            else
+              BUMP_TYPE="patch"
+            fi
+          fi
+
+          NEW_VER=$(python scripts/bump_version.py "$BUMP_TYPE")
+          TAG_NAME="v${NEW_VER}"
+          echo "VERSION=${TAG_NAME}" >> $GITHUB_ENV
+          echo "RAW_VERSION=${NEW_VER}" >> $GITHUB_ENV
+          echo "tag=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "raw_version=${NEW_VER}" >> $GITHUB_OUTPUT
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION g640rip/__init__.py
+          git commit -m "chore(release): bump version to ${TAG_NAME} [skip ci]"
+          git push origin main
+          git tag -a "${TAG_NAME}" -m "Release ${TAG_NAME}"
+          git push origin "${TAG_NAME}"
+
+      - name: Build standalone binary with PyInstaller
+        run: |
+          pyinstaller --noconfirm --clean --onefile \
+            --name "g640rip" \
+            --add-data "g640rip/ui/static:g640rip/ui/static" \
+            --hidden-import "uvicorn.logging" \
+            --hidden-import "uvicorn.loops" \
+            --hidden-import "uvicorn.loops.auto" \
+            --hidden-import "uvicorn.protocols" \
+            --hidden-import "uvicorn.protocols.http" \
+            --hidden-import "uvicorn.protocols.http.auto" \
+            --hidden-import "uvicorn.lifespan" \
+            --hidden-import "uvicorn.lifespan.on" \
+            g640rip_cli.py
+
+          # Verify standalone binary runs
+          ./dist/g640rip --help
+
+          # Package release archive
+          tar -czvf "g640rip-macos-arm64-${{ env.VERSION }}.tar.gz" -C dist g640rip
+
+      - name: Create GitHub Release named by version
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: ${{ env.VERSION }}
+          body: |
+            ## Canon G640 Micro-RIP ${{ env.VERSION }}
+
+            Standalone native executable for macOS (Apple Silicon arm64).
+
+            ### Features:
+            - Complete bypass of macOS ColorSync (Direct URF v1.4 streaming)
+            - 16-bit LittleCMS2 color management engine
+            - Calibrated hardware geometry alignment (`--scale-x -1.0`, `--scale-y +0.59`, `--comp-y 5.0`)
+            - Integrated CLI and Web/Desktop GUI
+
+            ### Installation:
+            ```bash
+            tar -xzvf g640rip-macos-arm64-${{ env.VERSION }}.tar.gz
+            ./g640rip --help
+            ```
+          files: |
+            g640rip-macos-arm64-${{ env.VERSION }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
