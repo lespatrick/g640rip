@@ -40,3 +40,4 @@ printtarg -v -i i1 -t 600 $PAGE_ARGS "$BASE_NAME"
 echo ""
 echo "[SUCCESS] Generated target files in targets/:"
 ls -lh "${BASE_NAME}"*
+
