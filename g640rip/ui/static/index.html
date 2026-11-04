@@ -460,8 +460,7 @@
           <div style="flex: 1;">
             <label>Paper Size</label>
             <select id="paperSize">
-              <option value="10x15" selected>10&times;15 cm (100 &times; 149 mm Postcard.Fullbleed)</option>
-              <option value="4x6">4&times;6" (101.6 &times; 152.4 mm)</option>
+              <option value="4x6" selected>4&times;6" (101.6 &times; 152.4 mm)</option>
               <option value="A4">A4 (210 &times; 297 mm)</option>
               <option value="5x7">5&times;7" (13 &times; 18 cm)</option>
               <option value="A5">A5 (148 &times; 210 mm)</option>
@@ -521,17 +520,8 @@
         <div class="form-row">
           <label>Rendering Intent</label>
           <select id="renderingIntent" onchange="regenerateProof()">
-            <option value="perceptual" selected>Perceptual (Vibrant / Warm Skin Tones)</option>
-            <option value="rel_col">Relative Colorimetric + BPC</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label>Contrast Boost (S-Curve)</label>
-          <select id="contrastBoost" onchange="regenerateProof()">
-            <option value="0.0" selected>Normal (0% - Linear ICC)</option>
-            <option value="0.10">+10% (Subtle Punch)</option>
-            <option value="0.15">+15% (Medium Contrast)</option>
-            <option value="0.25">+25% (High Contrast / Deep Blacks)</option>
+            <option value="rel_col" selected>Relative Colorimetric + BPC</option>
+            <option value="perceptual">Perceptual</option>
           </select>
         </div>
         <div class="form-row">
@@ -540,10 +530,6 @@
             <span class="val-badge" id="inkLimitBadge">100%</span>
           </div>
           <input type="range" id="inkLimitSlider" min="50" max="100" value="100" oninput="updateInkBadge(this.value)">
-        </div>
-        <div class="form-row" style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px;">
-          <label style="cursor: pointer;" for="paperWhiteToggle" title="Simulate exact paper white base tint (Absolute Colorimetric). Keep unchecked for standard Relative Colorimetric + BPC photo proofing.">Simulate Paper White Tint</label>
-          <input type="checkbox" id="paperWhiteToggle" onchange="regenerateProof()" style="width: auto;">
         </div>
       </div>
 
@@ -735,14 +721,13 @@
         return;
       }
       const profName = profSel.selectedOptions[0]?.text || 'selected profile';
-      const paperWhite = document.getElementById('paperWhiteToggle').checked;
 
       const fd = new FormData();
       fd.append('file', currentFile);
       fd.append('paper_profile_path', profPath);
-      fd.append('simulate_paper_white', paperWhite);
+      fd.append('simulate_paper_white', false);
       fd.append('intent', document.getElementById('renderingIntent').value);
-      fd.append('contrast', parseFloat(document.getElementById('contrastBoost').value));
+      fd.append('contrast', 0.0);
 
       document.getElementById('logStatus').innerText = `Recalculating soft proof with ${profName}...`;
 
@@ -837,10 +822,12 @@
       fd.append('bleed_pct', parseFloat(document.getElementById('bleedExpansion').value));
       fd.append('comp_x_pct', 0.0);
       fd.append('comp_y_pct', parseFloat(document.getElementById('compYSlider').value));
-      fd.append('offset_x_pct', 0.0);
-      fd.append('offset_y_pct', 0.0);
+      fd.append('scale_x_pct', -1.0);
+      fd.append('scale_y_pct', 0.59);
+      fd.append('offset_x_pct', -0.25);
+      fd.append('offset_y_pct', -1.59);
       fd.append('intent', document.getElementById('renderingIntent').value);
-      fd.append('contrast', parseFloat(document.getElementById('contrastBoost').value));
+      fd.append('contrast', 0.0);
 
       const btn = document.getElementById('btnSubmitPrint');
       btn.disabled = true;
@@ -882,10 +869,12 @@
       fd.append('bleed_pct', parseFloat(document.getElementById('bleedExpansion').value));
       fd.append('comp_x_pct', 0.0);
       fd.append('comp_y_pct', parseFloat(document.getElementById('compYSlider').value));
-      fd.append('offset_x_pct', 0.0);
-      fd.append('offset_y_pct', 0.0);
+      fd.append('scale_x_pct', -1.0);
+      fd.append('scale_y_pct', 0.59);
+      fd.append('offset_x_pct', -0.25);
+      fd.append('offset_y_pct', -1.59);
       fd.append('intent', document.getElementById('renderingIntent').value);
-      fd.append('contrast', parseFloat(document.getElementById('contrastBoost').value));
+      fd.append('contrast', 0.0);
 
       document.getElementById('logStatus').innerText = 'Exporting raw URF raster...';
       const res = await fetch('/api/export-raster', { method: 'POST', body: fd });
