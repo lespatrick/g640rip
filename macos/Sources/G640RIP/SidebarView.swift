@@ -7,23 +7,29 @@ struct SidebarView: View {
     @State private var isCalibrationExpanded: Bool = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                printerSection
-                Divider()
-                paperSection
-                Divider()
-                profileSection
-                Divider()
-                framingSection
-                Divider()
-                softProofControls
-                Divider()
-                calibrationSection
-                Divider()
-                printActionSection
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    printerSection
+                    Divider()
+                    paperSection
+                    Divider()
+                    profileSection
+                    Divider()
+                    framingSection
+                    Divider()
+                    softProofControls
+                    Divider()
+                    calibrationSection
+                }
+                .padding(16)
             }
-            .padding(16)
+
+            Divider()
+
+            printActionSection
+                .padding(16)
+                .background(Color(nsColor: .windowBackgroundColor))
         }
         .frame(minWidth: 320, idealWidth: 340, maxWidth: 380)
         .background(Color(nsColor: .controlBackgroundColor))
@@ -253,3 +259,4 @@ struct SidebarView: View {
         }
     }
 }
+

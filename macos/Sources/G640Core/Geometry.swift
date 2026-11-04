@@ -107,3 +107,4 @@ public struct GeometryConfig: Sendable, Equatable {
 
     public static let calibratedDefault = GeometryConfig()
 }
+

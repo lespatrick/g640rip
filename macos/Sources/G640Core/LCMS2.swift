@@ -127,3 +127,4 @@ public enum LCMS2PixelFormat {
     public static let rgb16: UInt32  = (4 << 16) | (3 << 3) | 2
     public static let rgba16: UInt32 = (4 << 16) | (1 << 7) | (3 << 3) | 2
 }
+

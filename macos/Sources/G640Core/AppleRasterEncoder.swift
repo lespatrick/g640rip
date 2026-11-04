@@ -196,3 +196,4 @@ public final class AppleRasterEncoder: Sendable {
         return out
     }
 }
+
