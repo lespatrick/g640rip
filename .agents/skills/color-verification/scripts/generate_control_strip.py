@@ -184,7 +184,7 @@ def main():
     print(f"Generating 600 DPI QA Control Target ({args.size}: {w}x{h} px)...")
     img = create_control_chart(w, h)
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    img.save(args.out)
+    img.save(args.out, dpi=(600, 600))
     print(f"[SUCCESS] Saved QA Control Strip to: {args.out}")
 
 
