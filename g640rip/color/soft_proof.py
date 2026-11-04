@@ -44,15 +44,23 @@ class SoftProofEngine:
 
     def __init__(
         self,
-        paper_profile_path: str,
+        paper_profile_path: Optional[str] = None,
+        paper_profile: Optional[LCMS2Profile] = None,
         display_profile_path: Optional[str] = None,
         display_profile: Optional[LCMS2Profile] = None,
         simulate_paper_white: bool = False,
         simulate_black_ink: bool = True,
         use_system_display: bool = False,
     ):
-        self.paper_profile_path = paper_profile_path
-        self.paper_profile = LCMS2Profile.open_file(paper_profile_path)
+        if paper_profile is not None:
+            self.paper_profile = paper_profile
+            self.paper_profile_path = paper_profile_path or "memory_profile.icc"
+        elif paper_profile_path and os.path.exists(paper_profile_path):
+            self.paper_profile_path = paper_profile_path
+            self.paper_profile = LCMS2Profile.open_file(paper_profile_path)
+        else:
+            self.paper_profile_path = paper_profile_path or "default_srgb.icc"
+            self.paper_profile = LCMS2Profile.create_srgb()
 
         if display_profile is not None:
             self.display_profile = display_profile

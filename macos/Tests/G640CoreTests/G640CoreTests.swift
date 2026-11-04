@@ -71,11 +71,11 @@ import CoreGraphics
 
 @Test func testGeometryConfigDefaults() {
     let config = GeometryConfig.calibratedDefault
-    #expect(config.scaleX == -1.0)
-    #expect(config.scaleY == 0.59)
-    #expect(config.offsetX == -0.25)
-    #expect(config.offsetY == -1.59)
-    #expect(config.compY == 5.0)
+    #expect(config.scaleX == -3.5)
+    #expect(config.scaleY == -5.0)
+    #expect(config.offsetX == 0.82)
+    #expect(config.offsetY == 1.41)
+    #expect(config.compY == 3.5)
     #expect(config.fitMode == .compensate)
 }
 

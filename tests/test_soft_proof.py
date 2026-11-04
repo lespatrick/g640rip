@@ -1,3 +1,5 @@
+import os
+import tempfile
 import unittest
 import numpy as np
 from PIL import Image
@@ -8,7 +10,16 @@ from g640rip.color.lcms2_capi import LCMS2Profile
 
 class TestSoftProof(unittest.TestCase):
     def setUp(self):
-        self.profile_path = "targets/Canon_G640_10x15_Glossy2_70corr.icc"
+        # Create a dynamic standalone ICC profile for self-contained testing (no external targets required)
+        self.tmp_icc = tempfile.NamedTemporaryFile(suffix=".icc", delete=False)
+        self.tmp_icc.close()
+        self.profile_path = self.tmp_icc.name
+        prof = LCMS2Profile.create_srgb()
+        prof.save_file(self.profile_path)
+
+    def tearDown(self):
+        if os.path.exists(self.profile_path):
+            os.remove(self.profile_path)
 
     def test_soft_proof_warmth_and_saturation(self):
         engine = SoftProofEngine(

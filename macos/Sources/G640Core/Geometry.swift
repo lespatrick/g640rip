@@ -73,22 +73,22 @@ public struct PaperSpec: Sendable, Equatable, Hashable {
 }
 
 public struct GeometryConfig: Sendable, Equatable {
-    public var scaleX: Double        // Default: -1.0% (calibrated width stretch correction)
-    public var scaleY: Double        // Default: +0.59% (calibrated roller compression correction)
-    public var offsetX: Double       // Default: -0.25% (centering)
-    public var offsetY: Double       // Default: -1.59% (feed grab delay)
-    public var compY: Double         // Default: 5.0% (bottom roller pinch safety zone)
+    public var scaleX: Double        // Default: -3.5% (calibrated overspray correction)
+    public var scaleY: Double        // Default: -5.0% (calibrated feed length crop correction)
+    public var offsetX: Double       // Default: +0.82% (calibrated horizontal centering)
+    public var offsetY: Double       // Default: +1.41% (calibrated vertical feed centering)
+    public var compY: Double         // Default: 3.5% (bottom roller pinch safety zone)
     public var bleedPct: Double      // Default: 1.5%
     public var fitMode: FitMode      // Default: .compensate
     public var borderless: Bool      // Default: true
     public var autoRotate: Bool      // Default: true
 
     public init(
-        scaleX: Double = -1.0,
-        scaleY: Double = 0.59,
-        offsetX: Double = -0.25,
-        offsetY: Double = -1.59,
-        compY: Double = 5.0,
+        scaleX: Double = -3.5,
+        scaleY: Double = -5.0,
+        offsetX: Double = 0.82,
+        offsetY: Double = 1.41,
+        compY: Double = 3.5,
         bleedPct: Double = 1.5,
         fitMode: FitMode = .compensate,
         borderless: Bool = true,
