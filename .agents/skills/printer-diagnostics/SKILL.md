@@ -71,3 +71,4 @@ lpstat -o
 * **`direct_ipp`**:
   - Connects directly to printer port 631 via pure-binary IPP 2.0.
   - Useful for standalone Linux/Docker deployments without local CUPS daemons.
+
