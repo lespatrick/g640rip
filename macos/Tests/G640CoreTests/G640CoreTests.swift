@@ -85,3 +85,38 @@ import CoreGraphics
     #expect(!queues.isEmpty)
     print("Discovered CUPS queues: \(queues.map(\.name))")
 }
+
+@Test func testSoftProofRendering() throws {
+    let srgb = ICCProfile.sRGB()
+    let paper = ICCProfile.sRGB()
+
+    let cs = CGColorSpace(name: CGColorSpace.sRGB)!
+    let ctx = CGContext(
+        data: nil,
+        width: 10,
+        height: 10,
+        bitsPerComponent: 8,
+        bytesPerRow: 40,
+        space: cs,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    )!
+    ctx.setFillColor(red: 0.8, green: 0.4, blue: 0.2, alpha: 1.0)
+    ctx.fill(CGRect(x: 0, y: 0, width: 10, height: 10))
+    let img = ctx.makeImage()!
+
+    let (proof, _) = try SoftProofEngine.renderSoftProof(
+        image: img,
+        paperProfile: paper,
+        displayProfile: srgb,
+        simulatePaperWhite: false,
+        highlightGamutAlarm: false
+    )
+
+    let data = proof.dataProvider?.data as Data?
+    #expect(data != nil)
+    if let d = data {
+        let bytes = [UInt8](d.prefix(8))
+        print("First 8 bytes of proof image: \(bytes)")
+        #expect(bytes[3] == 255) // Alpha channel should be 255!
+    }
+}

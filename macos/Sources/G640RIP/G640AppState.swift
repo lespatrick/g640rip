@@ -3,6 +3,14 @@ import CoreGraphics
 import SwiftUI
 import G640Core
 
+public enum PreviewMode: String, CaseIterable, Identifiable, Sendable {
+    case proof = "Po (Soft Proof)"
+    case split = "Podział (Split)"
+    case original = "Przed (Oryginał)"
+
+    public var id: String { rawValue }
+}
+
 @MainActor
 @Observable
 public final class G640AppState {
@@ -22,10 +30,10 @@ public final class G640AppState {
     public var selectedQueue: PrinterQueue? = nil
 
     // Soft proofing state
+    public var previewMode: PreviewMode = .proof
     public var simulatePaperWhite: Bool = false
     public var showGamutWarning: Bool = false
     public var splitPosition: Double = 0.5
-    public var showProofSplit: Bool = false
 
     public var proofCGImage: CGImage? = nil
     public var gamutMaskCGImage: CGImage? = nil
