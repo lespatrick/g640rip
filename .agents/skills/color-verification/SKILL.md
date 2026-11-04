@@ -15,6 +15,7 @@ This skill provides the complete verification runbook and tooling to audit color
 | Task | Command |
 | :--- | :--- |
 | **Verify Closed-Loop Print Scan** | `python3 .agents/skills/color-verification/scripts/verify_scan_reproduction.py --scan <scan.tif>` |
+| **Calculate Print Offsets & Margins** | `python3 .agents/skills/color-verification/scripts/calculate_scan_offsets.py <scan.tif>` |
 | **Verify ICC Profile (Data vs Profile)** | `python3 .agents/skills/color-verification/scripts/verify_profile.py <profile.icc>` |
 | **Interactive 3D Gamut** | `python3 .agents/skills/color-verification/scripts/verify_profile.py <profile.icc> --html-gamut` |
 | **Argyll profcheck** | `profcheck -v2 -k targets/<target>.ti3 targets/<profile>.icc` |
