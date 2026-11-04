@@ -217,14 +217,14 @@ def register_control_strip(scan_img: Image.Image) -> tuple[int, int, int, int, s
         gray = np.dot(np.array(t_img)[..., :3], [0.299, 0.587, 0.114])
         h, w = gray.shape
 
-        # Search top 25% for the black header banner
-        row_min = np.min(gray[:int(h * 0.25), :], axis=1)
-        dark_rows = np.where(row_min < 50)[0]
-        if len(dark_rows) == 0:
+        # Search top 25% for rows with at least 500 dark pixels (the solid header banner)
+        dark_counts = np.sum(gray[:int(h * 0.25), :] < 60, axis=1)
+        banner_rows = np.where(dark_counts > 500)[0]
+        if len(banner_rows) == 0:
             continue
 
-        hy0 = dark_rows[0]
-        row_sample = gray[hy0 + 20, :] if hy0 + 20 < h else gray[hy0, :]
+        hy0 = banner_rows[0]
+        row_sample = gray[hy0 + 10, :] if hy0 + 10 < h else gray[hy0, :]
         dark_cols = np.where(row_sample < 60)[0]
         if len(dark_cols) < 500:
             continue
@@ -234,7 +234,7 @@ def register_control_strip(scan_img: Image.Image) -> tuple[int, int, int, int, s
 
         if hw > best_w:
             best_w = hw
-            mode = "landscape" if hw > 2600 else "portrait"
+            mode = "landscape" if hw > 2500 else "portrait"
             best_config = (rot, int(hx0), int(hy0), int(hw), mode)
 
     if best_config is None:
@@ -266,7 +266,7 @@ def analyze_control_strip(scan_path: str, flare: float = 0.52) -> dict:
         mw = int(hw / len(MEMORY_COLORS_REF))
 
         # 5. ColorChecker 24
-        cc_y0 = hy0 + int(1068 * scale)
+        cc_y0 = hy0 + int(1100 * scale)
         left_w = int((hw - 40 * scale) * 4 / 7)
         cc_pw = left_w // 6
         cc_ph = int(110 * scale)
@@ -345,10 +345,10 @@ def analyze_control_strip(scan_path: str, flare: float = 0.52) -> dict:
         for idx, ref in enumerate(COLORCHECKER_24_REF):
             row = idx // 6
             col = idx % 6
-            px0 = hx0 + col * cc_pw + int(15 * scale)
-            px1 = px0 + cc_pw - int(30 * scale)
-            py0 = cc_y0 + row * cc_ph + int(15 * scale)
-            py1 = py0 + cc_ph - int(30 * scale)
+            px0 = hx0 + col * cc_pw + int(20 * scale)
+            px1 = px0 + cc_pw - int(40 * scale)
+            py0 = cc_y0 + row * cc_ph + int(20 * scale)
+            py1 = py0 + cc_ph - int(40 * scale)
 
             meas_lab = sample_box_lab(arr, px0, py0, px1, py1, flare=flare)
             de = ciede2000(meas_lab, ref["lab"])
