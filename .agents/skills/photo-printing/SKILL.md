@@ -14,8 +14,8 @@ This skill provides the complete operational guide for dispatching high-precisio
 
 | Task | Command |
 | :--- | :--- |
-| **Quick Photo Print (4x6)** | `.agents/skills/photo-printing/scripts/quick_print.sh <photo.jpg> 4x6` |
-| **Production Print (Custom)** | `./g640rip_cli.py print <photo.jpg> --size 4x6 --media glossy --profile targets/Canon_G640_10x15_Glossy2_iter1.icc --borderless --fit-mode compensate` |
+| **Quick Photo Print (4x6)** | `.agents/skills/photo-printing/scripts/quick_print.sh <photo.jpg> 4x6 targets/<profile>.icc` |
+| **Production Print (Custom)** | `./g640rip_cli.py print <photo.jpg> --size 4x6 --media glossy --profile targets/<profile>.icc --borderless --fit-mode compensate` |
 | **Launch Desktop GUI** | `./g640rip_cli.py gui` |
 | **Launch Web Dashboard** | `./g640rip_cli.py serve --port 8640` |
 | **Check Spooler Queue** | `lpstat -o` |
@@ -33,7 +33,7 @@ To achieve borderless edge-to-edge printing **without cropping feet or details f
 ./g640rip_cli.py print input_photo.jpg \
   --size 4x6 \
   --media glossy \
-  --profile targets/Canon_G640_10x15_Glossy2_iter1.icc \
+  --profile targets/<profile>.icc \
   --borderless \
   --fit-mode compensate \
   --comp-y 5.0 \
@@ -49,7 +49,6 @@ To achieve borderless edge-to-edge printing **without cropping feet or details f
 * `--scale-y +0.59`: Hardware feed length scaling correction percent (calibrated from QA strip: fixes -0.58% roller compression).
 * `--offset-x -0.25`: Horizontal centering shift percent.
 * `--offset-y -1.59`: Vertical feed centering shift percent.
-* `--contrast 0.10`: Subtle S-curve photographic contrast boost (prevents dullness under gallery lighting).
 * `--backend cups_raw`: Uses macOS background spooler (`-o raw`), preventing IPP socket timeouts during slow high-density photo passes.
 
 ---
@@ -62,7 +61,7 @@ For large A4 photo prints on Luster or Glossy II paper:
 ./g640rip_cli.py print portfolio_piece.tif \
   --size A4 \
   --media luster \
-  --profile targets/Canon_G640_10x15_Glossy2.icc \
+  --profile targets/<profile>.icc \
   --borderless \
   --fit-mode fill \
   --bleed 1.5 \
@@ -77,9 +76,9 @@ When photos need clean white margins for matting or framing without cropping:
 
 ```bash
 ./g640rip_cli.py print art_print.png \
-  --size 10x15 \
+  --size 4x6 \
   --media glossy \
-  --profile targets/Canon_G640_10x15_Glossy2.icc \
+  --profile targets/<profile>.icc \
   --fit-mode fit \
   --quality high
 ```

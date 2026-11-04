@@ -107,7 +107,7 @@ pip install -r requirements.txt
 ./g640rip_cli.py print my_photo.jpg \
   --size 4x6 \
   --media glossy \
-  --profile targets/Canon_G640_10x15_Glossy2_iter1.icc \
+  --profile targets/<profile>.icc \
   --borderless \
   --fit-mode compensate
 ```
@@ -180,12 +180,12 @@ chartread -v -N G640_10x15_80p_i1
 Run Argyll's `colprof` to synthesize the high-order matrix/LUT profile:
 ```bash
 colprof -v \
-  -D "Canon G640 4x6 Glossy II" \
+  -D "Canon G640 4x6 Custom" \
   -qm -al -cmt -dpc \
   -V 2.0 \
-  targets/G640_10x15_80p_i1
+  targets/<target_name>
 ```
-The resulting `.icc` profile is saved directly in `targets/` (e.g. `targets/G640_10x15_80p_i1.icc`).
+The resulting `.icc` profile is saved directly in `targets/` (e.g. `targets/<profile>.icc`).
 
 ---
 
@@ -198,7 +198,7 @@ Even after generating an initial profile (`base`), subtle residual errors ($\Del
    ./g640rip_cli.py print targets/G640_10x15_80p_i1.tif \
      --size 4x6 \
      --media glossy \
-     --profile targets/Canon_G640_10x15_Glossy2.icc \
+     --profile targets/<profile>.icc \
      --borderless \
      --fit-mode compensate
    ```
@@ -212,11 +212,11 @@ Even after generating an initial profile (`base`), subtle residual errors ($\Del
 3. **Synthesize Refined Profile (Iter 1 / Iter 2)**:
    ```bash
    python3 .agents/skills/color-calibration/scripts/refine_icc_profile.py \
-     --base-ti3 targets/Canon_G640_10x15_Glossy2.ti3 \
+     --base-ti3 targets/<profile>.ti3 \
      --residuals targets/verification_residuals.json \
      --rate 0.40
    ```
-   The refinement engine applies negative-feedback adjustments ($\mathbf{L}^*_{\text{corr}} = \mathbf{L}^*_{\text{meas}} - \alpha \cdot \Delta \mathbf{L}^*$), bounds adjustments within safe physical gamuts, and builds `Canon_G640_10x15_Glossy2_iter1.icc`.
+   The refinement engine applies negative-feedback adjustments ($\mathbf{L}^*_{\text{corr}} = \mathbf{L}^*_{\text{meas}} - \alpha \cdot \Delta \mathbf{L}^*$), bounds adjustments within safe physical gamuts, and builds `targets/<profile>_iter1.icc`.
 
 ---
 
@@ -247,10 +247,10 @@ To measure your printer's exact geometry:
    ```
 2. **Print the Control Strip**:
    ```bash
-   ./g640rip_cli.py print targets/QA_Control_Strip_10x15.png \
+   ./g640rip_cli.py print targets/QA_Control_Strip_4x6.png \
      --size 4x6 \
      --media glossy \
-     --profile targets/Canon_G640_10x15_Glossy2_iter1.icc \
+     --profile targets/<profile>.icc \
      --borderless \
      --fit-mode compensate
    ```
@@ -283,7 +283,7 @@ To measure your printer's exact geometry:
 ./g640rip_cli.py print input_photo.jpg \
   --size 4x6 \
   --media glossy \
-  --profile targets/Canon_G640_10x15_Glossy2_iter1.icc \
+  --profile targets/<profile>.icc \
   --borderless \
   --fit-mode compensate \
   --quality high \
@@ -360,7 +360,7 @@ The script automatically registers the chart orientation and computes CIEDE2000 
 
 ### Real-World Calibration Example: Canon Photo Paper Plus Glossy II (PP-201)
 
-The following tables document actual laboratory verification results captured from a 600 DPI optical scan of the **Photographic QA Control Strip** printed on the Canon G640 using the refined profile `Canon_G640_10x15_Glossy2_iter1.icc`:
+The following tables document actual laboratory verification results captured from a 600 DPI optical scan of the **Photographic QA Control Strip** printed on the Canon G640 using an iterative custom paper profile (`targets/<profile>_iter1.icc`):
 
 #### 1. Photographic Memory Colors Fidelity (CIEDE2000)
 

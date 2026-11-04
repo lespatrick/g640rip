@@ -22,7 +22,7 @@ This skill provides the complete verification runbook and tooling to audit color
 | **Argyll profcheck** | `profcheck -v2 -k targets/<target>.ti3 targets/<profile>.icc` |
 | **Soft Proof & Gamut Check** | `./g640rip_cli.py proof <image.tif> --profile targets/<profile>.icc --out-proof proof.png --out-gamut gamut.png` |
 | **Generate Visual QA Target** | `python3 .agents/skills/color-verification/scripts/generate_control_strip.py --size 4x6` |
-| **Print QA Target** | `./g640rip_cli.py print targets/QA_Control_Strip_10x15.png --profile targets/Canon_G640_10x15_Glossy2_iter1.icc --media glossy --size 4x6` |
+| **Print QA Target** | `./g640rip_cli.py print targets/QA_Control_Strip_4x6.png --profile targets/<profile>.icc --media glossy --size 4x6` |
 
 ---
 
@@ -51,7 +51,7 @@ python3 .agents/skills/color-verification/scripts/verify_scan_reproduction.py \
 Run the verification tool on any generated ICC profile:
 
 ```bash
-python3 .agents/skills/color-verification/scripts/verify_profile.py targets/Canon_G640_10x15_Glossy2.icc
+python3 .agents/skills/color-verification/scripts/verify_profile.py targets/<profile>.icc
 ```
 
 #### What it measures:
@@ -75,7 +75,7 @@ Before sending files to the printer, verify how out-of-gamut colors will compres
 #### Relative Colorimetric + BPC (Standard Photo Mode):
 ```bash
 ./g640rip_cli.py proof input_photo.jpg \
-  --profile targets/Canon_G640_10x15_Glossy2.icc \
+  --profile targets/<profile>.icc \
   --no-paper-white \
   --out-proof proof_rel.png \
   --out-gamut gamut_mask.png
@@ -84,7 +84,7 @@ Before sending files to the printer, verify how out-of-gamut colors will compres
 #### Absolute Colorimetric (Simulate Paper Base Tint):
 ```bash
 ./g640rip_cli.py proof input_photo.jpg \
-  --profile targets/Canon_G640_10x15_Glossy2.icc \
+  --profile targets/<profile>.icc \
   --out-proof proof_paper_white.png
 ```
 
@@ -101,7 +101,7 @@ Before sending files to the printer, verify how out-of-gamut colors will compres
 2. Print the target with your active profile:
    ```bash
    ./g640rip_cli.py print targets/QA_Control_Strip_4x6.png \
-     --profile targets/Canon_G640_10x15_Glossy2.icc \
+     --profile targets/<profile>.icc \
      --media glossy \
      --size 4x6 \
      --fit-mode compensate

@@ -101,7 +101,7 @@ If the resulting prints require fine-tuning:
 ### Step 5: Verify the Calibrated Profile
 Immediately audit the new profile using the verification skill:
 ```bash
-python3 .agents/skills/color-verification/scripts/verify_profile.py targets/Canon_G640_10x15_Glossy2.icc
+python3 .agents/skills/color-verification/scripts/verify_profile.py targets/<profile>.icc
 ```
 
 Target benchmarks:
@@ -120,11 +120,11 @@ If a verification scan reveals residual color discrepancies ($\Delta E_{00} > 1.
 2. Feed residuals into the refinement engine to compute negative feedback adjustments and re-synthesize the ICC profile:
    ```bash
    python3 .agents/skills/color-calibration/scripts/refine_icc_profile.py \
-     --base-ti3 targets/Canon_G640_10x15_Glossy2.ti3 \
+     --base-ti3 targets/<profile>.ti3 \
      --residuals targets/verification_residuals.json \
      --rate 0.60
    ```
-   The refined profile (e.g. `targets/Canon_G640_10x15_Glossy2_iter1.icc`) is automatically built with `colprof` directly in `targets/`.
+   The refined profile (e.g. `targets/<profile>_iter1.icc`) is automatically built with `colprof` directly in `targets/`.
 
 ---
 

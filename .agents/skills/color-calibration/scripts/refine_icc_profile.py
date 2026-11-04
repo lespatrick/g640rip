@@ -151,7 +151,7 @@ def install_profile(icc_path: str, base_name: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Iterative Closed-Loop ICC Profile Refinement")
-    parser.add_argument("--base-ti3", default="targets/Canon_G640_10x15_Glossy2.ti3", help="Base .ti3 profile measurement file")
+    parser.add_argument("--base-ti3", required=True, help="Base .ti3 profile measurement file (e.g. targets/<name>.ti3)")
     parser.add_argument("--residuals", default="targets/verification_residuals.json", help="Residual errors JSON from verify_scan_reproduction.py")
     parser.add_argument("--rate", "--alpha", type=float, default=0.60, help="Negative feedback learning/damping factor (default: 0.60)")
     parser.add_argument("--name", default=None, help="Output profile base name (default: auto-incremented iter)")
