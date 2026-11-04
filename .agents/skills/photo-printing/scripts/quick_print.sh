@@ -30,3 +30,4 @@ python3 g640rip_cli.py print "$IMAGE" \
     --contrast 0.10 \
     --quality high \
     --backend cups_raw
+
