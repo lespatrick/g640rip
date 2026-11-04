@@ -98,3 +98,4 @@ Before sending files to the printer, verify how out-of-gamut colors will compres
 ## Detailed References
 
 - [Photographic Standards & Tolerances](./references/verification_standards.md)
+

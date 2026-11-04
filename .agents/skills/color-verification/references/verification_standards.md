@@ -59,3 +59,4 @@ Always evaluate physical prints under standard ISO 3664 viewing conditions (D50,
 2. **Shadow Separation**: Check the 0% to 5% step wedge. Steps 1% and 2% should be distinguishable from pure black 0% under direct light without crushing.
 3. **Highlight Separation**: Check the 95% to 99% step wedge. Steps should have tone distinct from unprinted paper white (100%).
 4. **Metamerism & Bronzing**: View the print at an oblique $45^\circ$ angle. The ChromaLife100+ dye ink should show zero bronzing (metallic sheen) on glossy media.
+

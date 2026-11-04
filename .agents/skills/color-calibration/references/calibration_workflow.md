@@ -63,3 +63,4 @@ colprof \
 | **Warmth Offset** | `--warmth` | `-2.0` - `+2.0` | Fine manual bias in $b^*$ and $a^*$ to inject additional yellow/red dye ink into portraits. |
 | **Total Ink Limit (TIL)** | `--ink-limit` | `0.50` - `1.0` | Restricts maximum multi-channel ink volume to prevent ink pooling or bleeding on lighter paper stocks. |
 | **Contrast Boost** | `--contrast` | `0.0` - `0.25` | S-curve contrast gamma boost applied in production engine without clipping white or black points. |
+
