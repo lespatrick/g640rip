@@ -69,8 +69,7 @@ Allow the printed target to dry and stabilize:
    - Optical flare compensation (restores $L^* \approx 3.0$ / $D_{\max} \ge 2.40$).
    - Bradford D65 to D50 chromatic adaptation.
    - Neutral-axis scanner chromatic neutralization (50% bias balance).
-   - Generates Argyll `.ti3` and calls `colprof` to build the `.icc` profile.
-   - Automatically installs to `~/Library/ColorSync/Profiles/`.
+   - Generates Argyll `.ti3` and calls `colprof` to build `.icc` profile in `targets/`.
 
 #### Option B: Spectrophotometer Workflow (i1Pro / ColorMunki)
 ```bash
@@ -125,7 +124,7 @@ If a verification scan reveals residual color discrepancies ($\Delta E_{00} > 1.
      --residuals targets/verification_residuals.json \
      --rate 0.60
    ```
-   The refined profile (e.g. `Canon_G640_10x15_Glossy2_iter1.icc`) is automatically built with `colprof` and installed to `~/Library/ColorSync/Profiles/`.
+   The refined profile (e.g. `targets/Canon_G640_10x15_Glossy2_iter1.icc`) is automatically built with `colprof` directly in `targets/`.
 
 ---
 

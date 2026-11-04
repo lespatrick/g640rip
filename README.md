@@ -185,7 +185,7 @@ colprof -v \
   -V 2.0 \
   targets/G640_10x15_80p_i1
 ```
-The resulting `.icc` profile is saved and automatically installed to `~/Library/ColorSync/Profiles/`.
+The resulting `.icc` profile is saved directly in `targets/` (e.g. `targets/G640_10x15_80p_i1.icc`).
 
 ---
 

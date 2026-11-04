@@ -96,14 +96,14 @@ Before sending files to the printer, verify how out-of-gamut colors will compres
 
 1. Generate the standard 600 DPI QA Control Strip:
    ```bash
-   python3 .agents/skills/color-verification/scripts/generate_control_strip.py --size 10x15
+   python3 .agents/skills/color-verification/scripts/generate_control_strip.py --size 4x6
    ```
 2. Print the target with your active profile:
    ```bash
-   ./g640rip_cli.py print targets/QA_Control_Strip_10x15.png \
+   ./g640rip_cli.py print targets/QA_Control_Strip_4x6.png \
      --profile targets/Canon_G640_10x15_Glossy2.icc \
      --media glossy \
-     --size 10x15 \
+     --size 4x6 \
      --fit-mode compensate
    ```
 3. Allow the print to dry for 10 minutes.
