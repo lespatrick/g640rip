@@ -101,6 +101,9 @@ _lcms2.cmsOpenProfileFromMem.argtypes = [ctypes.c_char_p, cmsUInt32Number]
 _lcms2.cmsCloseProfile.restype = cmsBool
 _lcms2.cmsCloseProfile.argtypes = [cmsHPROFILE]
 
+_lcms2.cmsSaveProfileToFile.restype = cmsBool
+_lcms2.cmsSaveProfileToFile.argtypes = [cmsHPROFILE, ctypes.c_char_p]
+
 _lcms2.cmsCreateTransform.restype = cmsHTRANSFORM
 _lcms2.cmsCreateTransform.argtypes = [
     cmsHPROFILE,
@@ -176,6 +179,13 @@ class LCMS2Profile:
         if self._owned and self._handle:
             _lcms2.cmsCloseProfile(self._handle)
             self._handle = None
+
+    def save_file(self, path: str):
+        if not self._handle:
+            raise RuntimeError("Cannot save closed profile")
+        res = _lcms2.cmsSaveProfileToFile(self._handle, path.encode("utf-8"))
+        if not res:
+            raise RuntimeError(f"Failed to save profile to: {path}")
 
     def __del__(self):
         self.close()

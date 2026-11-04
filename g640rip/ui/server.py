@@ -175,11 +175,11 @@ async def post_export_raster(
     fit_mode: str = Form("compensate"),
     bleed_pct: float = Form(0.0),
     comp_x_pct: float = Form(0.0),
-    comp_y_pct: float = Form(5.0),
-    scale_x_pct: float = Form(-1.0),
-    scale_y_pct: float = Form(0.59),
-    offset_x_pct: float = Form(-0.25),
-    offset_y_pct: float = Form(-1.59),
+    comp_y_pct: float = Form(3.5),
+    scale_x_pct: float = Form(-3.5),
+    scale_y_pct: float = Form(-5.0),
+    offset_x_pct: float = Form(0.82),
+    offset_y_pct: float = Form(1.41),
     intent: str = Form("rel_col"),
 ):
     """Generate raw URF stream and return as downloadable file."""
@@ -245,11 +245,11 @@ async def post_print(
     fit_mode: str = Form("compensate"),
     bleed_pct: float = Form(0.0),
     comp_x_pct: float = Form(0.0),
-    comp_y_pct: float = Form(5.0),
-    scale_x_pct: float = Form(-1.0),
-    scale_y_pct: float = Form(0.59),
-    offset_x_pct: float = Form(-0.25),
-    offset_y_pct: float = Form(-1.59),
+    comp_y_pct: float = Form(3.5),
+    scale_x_pct: float = Form(-3.5),
+    scale_y_pct: float = Form(-5.0),
+    offset_x_pct: float = Form(0.82),
+    offset_y_pct: float = Form(1.41),
     intent: str = Form("rel_col"),
 ):
     """Execute raw IPP Print-Job directly to printer."""
