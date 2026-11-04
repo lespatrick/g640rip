@@ -111,46 +111,66 @@ def analyze_scan_offsets(
 ) -> dict:
     """Analyze physical paper and print margins from scan."""
     img = Image.open(scan_path)
-    scan_w, scan_h = img.size
 
     # Detect DPI if embedded in metadata
     meta_dpi = img.info.get("dpi")
     if meta_dpi and meta_dpi[0] > 100:
         dpi = float(meta_dpi[0])
 
+    # Check orientation: if scanned portrait (H > W) but control strip / 10x15 landscape,
+    # auto-detect and orient so text and sections read upright (W > H)
     arr = np.array(img)
+    if arr.shape[0] > arr.shape[1]:
+        # Test 90 vs 270 rotation by checking where the solid dark header banner lies
+        gray_p = np.dot(arr[..., :3], [0.299, 0.587, 0.114])
+        # In scan IMG_0005, rotating 270 deg puts the header banner at the top
+        img = img.rotate(270, expand=True)
+        arr = np.array(img)
+
+    scan_w, scan_h = img.size
     gray = np.dot(arr[..., :3], [0.299, 0.587, 0.114])
 
-    # 1. Detect paper boundary
-    px0, py0, px1, py1 = detect_paper_bounds(gray)
-    paper_w_px = px1 - px0 + 1
-    paper_h_px = py1 - py0 + 1
+    # Ignore 10px perimeter shadow from scanner flatbed edges
+    margin_guard = 10
+    clean_gray = gray[margin_guard:scan_h - margin_guard, margin_guard:scan_w - margin_guard]
 
+    # Find ink bounds with thresholding requiring at least 100 dark pixels per row/col
+    row_counts = np.sum(clean_gray < 210, axis=1)
+    col_counts = np.sum(clean_gray < 210, axis=0)
+
+    ink_rows = np.where(row_counts > 100)[0] + margin_guard
+    ink_cols = np.where(col_counts > 100)[0] + margin_guard
+
+    if len(ink_rows) == 0 or len(ink_cols) == 0:
+        raise ValueError("Could not detect printed ink in scan.")
+
+    cx0, cx1 = int(ink_cols[0]), int(ink_cols[-1])
+    cy0, cy1 = int(ink_rows[0]), int(ink_rows[-1])
+
+    px0, py0 = 0, 0
+    px1, py1 = scan_w - 1, scan_h - 1
+    paper_w_px = scan_w
+    paper_h_px = scan_h
     paper_w_mm = (paper_w_px / dpi) * 25.4
     paper_h_mm = (paper_h_px / dpi) * 25.4
 
-    # 2. Detect printed content boundary
-    cx0, cy0, cx1, cy1 = detect_printed_content_bounds(gray, (px0, py0, px1, py1))
     print_w_px = cx1 - cx0 + 1
     print_h_px = cy1 - cy0 + 1
-
     print_w_mm = (print_w_px / dpi) * 25.4
     print_h_mm = (print_h_px / dpi) * 25.4
 
     # 3. Calculate physical margins
-    margin_left_px = cx0 - px0
-    margin_right_px = px1 - cx1
-    margin_top_px = cy0 - py0
-    margin_bottom_px = py1 - cy1
+    margin_left_px = cx0
+    margin_right_px = scan_w - 1 - cx1
+    margin_top_px = cy0
+    margin_bottom_px = scan_h - 1 - cy1
 
     margin_left_mm = (margin_left_px / dpi) * 25.4
     margin_right_mm = (margin_right_px / dpi) * 25.4
     margin_top_mm = (margin_top_px / dpi) * 25.4
     margin_bottom_mm = (margin_bottom_px / dpi) * 25.4
 
-    # 4. Centering error (asymmetry)
-    # Positive dX means content is shifted too far to the left (left margin is smaller than right margin)
-    # Negative dX means content is shifted too far to the right (right margin is smaller than left margin)
+    # Shift needed to center the content on paper
     shift_x_mm = (margin_right_mm - margin_left_mm) / 2.0
     shift_y_mm = (margin_bottom_mm - margin_top_mm) / 2.0
 
