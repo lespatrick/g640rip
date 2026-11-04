@@ -21,8 +21,8 @@ This skill provides the complete verification runbook and tooling to audit color
 | **Interactive 3D Gamut** | `python3 .agents/skills/color-verification/scripts/verify_profile.py <profile.icc> --html-gamut` |
 | **Argyll profcheck** | `profcheck -v2 -k targets/<target>.ti3 targets/<profile>.icc` |
 | **Soft Proof & Gamut Check** | `./g640rip_cli.py proof <image.tif> --profile targets/<profile>.icc --out-proof proof.png --out-gamut gamut.png` |
-| **Generate Visual QA Target** | `python3 .agents/skills/color-verification/scripts/generate_control_strip.py --size 10x15` |
-| **Print QA Target** | `./g640rip_cli.py print targets/QA_Control_Strip_10x15.png --profile targets/<profile>.icc --media glossy --size 10x15` |
+| **Generate Visual QA Target** | `python3 .agents/skills/color-verification/scripts/generate_control_strip.py --size 4x6` |
+| **Print QA Target** | `./g640rip_cli.py print targets/QA_Control_Strip_10x15.png --profile targets/Canon_G640_10x15_Glossy2_iter1.icc --media glossy --size 4x6` |
 
 ---
 

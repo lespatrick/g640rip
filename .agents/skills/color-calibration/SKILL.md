@@ -14,8 +14,8 @@ This skill provides the complete end-to-end runbook for generating custom ICC pa
 
 | Task | Command |
 | :--- | :--- |
-| **Print 80p Target (10x15)** | `./g640rip_cli.py print-target targets/G640_10x15_80p_i1.tif --media glossy --size 10x15` |
-| **Print 160p Target (10x15)** | `./g640rip_cli.py print-target targets/G640_10x15_160p_i1_01.tif --media glossy --size 10x15` |
+| **Print 80p Target (4x6)** | `./g640rip_cli.py print-target targets/G640_10x15_80p_i1.tif --media glossy --size 4x6` |
+| **Print 160p Target (4x6)** | `./g640rip_cli.py print-target targets/G640_10x15_160p_i1_01.tif --media glossy --size 4x6` |
 | **Process Scan & Make ICC (100%)** | `python3 process_scan_and_make_icc.py --scan scan.tif --strength 1.0` |
 | **Process Scan & Make ICC (70% Blend)** | `python3 process_scan_and_make_icc.py --scan scan.tif --strength 0.70` |
 | **Iterative Profile Refinement** | `python3 .agents/skills/color-calibration/scripts/refine_icc_profile.py --residuals targets/verification_residuals.json` |
@@ -36,7 +36,7 @@ Print the target using **pure 1:1 hardware bypass (zero CMS)**:
 ```bash
 ./g640rip_cli.py print-target targets/G640_10x15_80p_i1.tif \
   --media glossy \
-  --size 10x15 \
+  --size 4x6 \
   --backend cups_raw
 ```
 > [!IMPORTANT]

@@ -14,8 +14,8 @@ This skill provides the complete operational guide for dispatching high-precisio
 
 | Task | Command |
 | :--- | :--- |
-| **Quick Photo Print (10x15)** | `.agents/skills/photo-printing/scripts/quick_print.sh <photo.jpg> 10x15` |
-| **Production Print (Custom)** | `./g640rip_cli.py print <photo.jpg> --size 10x15 --media glossy --profile targets/Canon_G640_10x15_Glossy2.icc --borderless --fit-mode compensate` |
+| **Quick Photo Print (4x6)** | `.agents/skills/photo-printing/scripts/quick_print.sh <photo.jpg> 4x6` |
+| **Production Print (Custom)** | `./g640rip_cli.py print <photo.jpg> --size 4x6 --media glossy --profile targets/Canon_G640_10x15_Glossy2_iter1.icc --borderless --fit-mode compensate` |
 | **Launch Desktop GUI** | `./g640rip_cli.py gui` |
 | **Launch Web Dashboard** | `./g640rip_cli.py serve --port 8640` |
 | **Check Spooler Queue** | `lpstat -o` |
@@ -31,13 +31,12 @@ To achieve borderless edge-to-edge printing **without cropping feet or details f
 
 ```bash
 ./g640rip_cli.py print input_photo.jpg \
-  --size 10x15 \
+  --size 4x6 \
   --media glossy \
-  --profile targets/Canon_G640_10x15_Glossy2.icc \
+  --profile targets/Canon_G640_10x15_Glossy2_iter1.icc \
   --borderless \
   --fit-mode compensate \
   --comp-y 5.0 \
-  --contrast 0.10 \
   --quality high \
   --backend cups_raw
 ```
