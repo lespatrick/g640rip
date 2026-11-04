@@ -12,3 +12,4 @@ struct G640RIPApp: App {
         .windowToolbarStyle(.unified)
     }
 }
+

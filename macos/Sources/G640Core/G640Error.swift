@@ -37,3 +37,4 @@ public enum G640Error: LocalizedError, Sendable {
         }
     }
 }
+
