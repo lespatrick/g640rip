@@ -2,14 +2,14 @@
 set -e
 
 # Convenience script for printing photos with optimal G640 Micro-RIP settings
-# Usage: ./quick_print.sh <image_path> [10x15|A4] [ProfileName.icc]
+# Usage: ./quick_print.sh <image_path> [4x6|A4] [ProfileName.icc]
 
 IMAGE="$1"
-SIZE="${2:-10x15}"
-PROFILE="${3:-targets/Canon_G640_10x15_Glossy2.icc}"
+SIZE="${2:-4x6}"
+PROFILE="${3:-targets/Canon_G640_10x15_Glossy2_iter1.icc}"
 
 if [ -z "$IMAGE" ] || [ ! -f "$IMAGE" ]; then
-    echo "Usage: ./quick_print.sh <image_path> [10x15|A4] [ProfileName.icc]"
+    echo "Usage: ./quick_print.sh <image_path> [4x6|A4] [ProfileName.icc]"
     exit 1
 fi
 
