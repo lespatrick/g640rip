@@ -16,7 +16,7 @@ This skill covers device discovery, IPP protocol attribute queries, hardware cap
 | :--- | :--- |
 | **Discover Printer (mDNS & CUPS)** | `./g640rip_cli.py discover` |
 | **Query Full IPP Attributes** | `./g640rip_cli.py attributes` |
-| **Query Specific Printer IPP** | `./g640rip_cli.py attributes --printer-uri ipp://192.168.0.49:631/ipp/print` |
+| **Query Specific Printer IPP** | `./g640rip_cli.py attributes --printer-uri ipp://<printer-ip>:631/ipp/print` |
 | **Check Spooler & Queue Status** | `lpstat -p Canon_G600_series -o` |
 | **Cancel Active / Stuck Jobs** | `./g640rip_cli.py cancel` |
 | **Cancel Specific Job by ID** | `./g640rip_cli.py cancel --job-id 58` |

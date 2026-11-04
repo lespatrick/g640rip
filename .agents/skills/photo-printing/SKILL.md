@@ -88,7 +88,7 @@ When photos need clean white margins for matting or framing without cropping:
 
 ### 4. Interactive Desktop GUI & Web Dashboard
 
-Users who prefer visual drag-and-drop framing, split-screen soft proofing, and live S-curve preview can use:
+Users who prefer visual drag-and-drop framing and split-screen soft proofing can use:
 * **Native Desktop App**:
   ```bash
   ./g640rip_cli.py gui
@@ -97,7 +97,7 @@ Users who prefer visual drag-and-drop framing, split-screen soft proofing, and l
   ```bash
   ./g640rip_cli.py serve --port 8640
   ```
-  Open browser at `http://127.0.0.1:8640`.
+  Open browser at `http://localhost:8640`.
 
 ---
 
