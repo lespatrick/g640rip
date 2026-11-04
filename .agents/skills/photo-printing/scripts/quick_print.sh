@@ -6,10 +6,21 @@ set -e
 
 IMAGE="$1"
 SIZE="${2:-4x6}"
-PROFILE="${3:-targets/Canon_G640_10x15_Glossy2_iter1.icc}"
+PROFILE="$3"
+
+if [ -z "$PROFILE" ]; then
+    # Auto-detect first available ICC profile in targets/
+    PROFILE=$(ls targets/*.icc 2>/dev/null | head -n 1 || true)
+fi
 
 if [ -z "$IMAGE" ] || [ ! -f "$IMAGE" ]; then
-    echo "Usage: ./quick_print.sh <image_path> [4x6|A4] [ProfileName.icc]"
+    echo "Usage: ./quick_print.sh <image_path> [4x6|A4] [targets/<profile>.icc]"
+    exit 1
+fi
+
+if [ -z "$PROFILE" ] || [ ! -f "$PROFILE" ]; then
+    echo "Error: No ICC profile provided or found in targets/."
+    echo "Usage: ./quick_print.sh <image_path> [4x6|A4] [targets/<profile>.icc]"
     exit 1
 fi
 
