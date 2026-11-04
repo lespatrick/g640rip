@@ -47,10 +47,12 @@ def xyz_to_lab(xyz: np.ndarray) -> np.ndarray:
 
 
 def lab_to_xyz(lab: np.ndarray) -> np.ndarray:
-    """Convert CIE L*a*b* (D50) to CIE XYZ (D50)."""
+    """Convert CIE L*a*b* (D50) to CIE XYZ (D50) with strict physical bounds."""
     Xn, Yn, Zn = 96.422, 100.000, 82.521
-    L, a, b = lab[0], lab[1], lab[2]
-    fy = (L + 16.0) / 116.0
+    L, a, b = float(lab[0]), float(lab[1]), float(lab[2])
+    # Strictly clamp L* to valid physical range
+    L_clamped = np.clip(L, 0.5, 99.8)
+    fy = (L_clamped + 16.0) / 116.0
     fx = a / 500.0 + fy
     fz = fy - b / 200.0
 
@@ -58,10 +60,14 @@ def lab_to_xyz(lab: np.ndarray) -> np.ndarray:
     def f_inv(t):
         return np.where(t > delta, t ** 3, 3 * delta**2 * (t - 4.0/29.0))
 
-    x = f_inv(fx) * Xn
-    y = f_inv(fy) * Yn
-    z = f_inv(fz) * Zn
-    return np.array([max(0.01, float(x)), max(0.01, float(y)), max(0.01, float(z))])
+    x = float(f_inv(fx) * Xn)
+    y = float(f_inv(fy) * Yn)
+    z = float(f_inv(fz) * Zn)
+    return np.array([
+        float(np.clip(x, 0.01, 99.0)),
+        float(np.clip(y, 0.01, 100.0)),
+        float(np.clip(z, 0.01, 110.0))
+    ])
 
 
 def parse_ti3_file(ti3_path: str) -> Tuple[List[str], List[Dict[str, Any]]]:
@@ -199,9 +205,22 @@ def main():
         res_entry = residuals_by_sid.get(sid)
         if res_entry:
             # delta_lab = lab_measured - lab_expected
-            delta_lab = np.array(res_entry["delta_lab"])
-            # Apply negative feedback correction
-            lab_new = lab_old - alpha * delta_lab
+            delta_lab = np.array(res_entry["delta_lab"], dtype=float)
+            
+            # Bound per-iteration step to +/- 5.0 dE to prevent runaway or noise amplification
+            delta_bounded = np.clip(delta_lab, -5.0, 5.0)
+
+            # In Argyll's .ti3 file, each row characterizes the printer's forward response:
+            #   Device RGB -> Physical Lab produced on paper.
+            # If the physical print measured warmer/redder than expected (delta_lab > 0),
+            # we tell colprof that this RGB physically outputs higher Lab (+).
+            # When colprof constructs the inverse B2A LUT (PCS Lab -> Device RGB),
+            # it reduces warm ink channels to hit the neutral PCS target.
+            lab_new = lab_old + alpha * delta_bounded
+            lab_new[0] = float(np.clip(lab_new[0], 0.5, 99.5))
+            lab_new[1] = float(np.clip(lab_new[1], -110.0, 110.0))
+            lab_new[2] = float(np.clip(lab_new[2], -110.0, 110.0))
+
             xyz_new = lab_to_xyz(lab_new)
 
             corrections_summary.append({
@@ -209,7 +228,7 @@ def main():
                 "rgb": r["rgb"],
                 "lab_old": lab_old,
                 "lab_new": lab_new,
-                "delta": delta_lab,
+                "delta": delta_bounded,
                 "de00_orig": res_entry.get("de00", 0.0)
             })
         else:
