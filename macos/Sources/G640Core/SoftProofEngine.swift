@@ -74,6 +74,13 @@ public final class SoftProofEngine: Sendable {
                 guard let inPtr = inBytes.baseAddress,
                       let outPtr = outBytes.baseAddress else { return }
                 transform.transform(input: inPtr, output: outPtr, pixelCount: pixelCount)
+
+                // LittleCMS zeroes extra/alpha channels in TYPE_RGBA_8. Restore alpha to 255 (or source alpha):
+                let pIn = inPtr.assumingMemoryBound(to: UInt8.self)
+                let pOut = outPtr.assumingMemoryBound(to: UInt8.self)
+                for i in 0..<pixelCount {
+                    pOut[i * 4 + 3] = pIn[i * 4 + 3]
+                }
             }
         }
 

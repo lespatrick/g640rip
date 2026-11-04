@@ -147,9 +147,16 @@ struct SidebarView: View {
     }
 
     private var softProofControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Label("Soft Proofing (LittleCMS2)", systemImage: "eye.fill")
                 .font(.headline)
+
+            Picker("Tryb podglądu:", selection: $state.previewMode) {
+                ForEach(PreviewMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
 
             Toggle("Symuluj biel papieru (Absolute Colorimetric)", isOn: $state.simulatePaperWhite)
                 .font(.subheadline)
@@ -162,9 +169,6 @@ struct SidebarView: View {
                 .onChange(of: state.showGamutWarning) { _, _ in
                     state.updateSoftProof()
                 }
-
-            Toggle("Podgląd dzielony (Split View)", isOn: $state.showProofSplit)
-                .font(.subheadline)
         }
     }
 

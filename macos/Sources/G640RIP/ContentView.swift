@@ -17,10 +17,12 @@ struct ContentView: View {
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
                 if state.loadedCGImage != nil {
-                    Toggle(isOn: $state.showProofSplit) {
-                        Label("Split Soft Proof", systemImage: "rectangle.split.2x1")
+                    Picker("Tryb", selection: $state.previewMode) {
+                        ForEach(PreviewMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
                     }
-                    .help("Porównanie dzielone przed / po profilu")
+                    .pickerStyle(.segmented)
 
                     Toggle(isOn: $state.showGamutWarning) {
                         Label("Gamut Alarm", systemImage: "exclamationmark.triangle")
