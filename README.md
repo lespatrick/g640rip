@@ -12,10 +12,11 @@ A high-fidelity, color-accurate local micro-RIP tailored specifically for the 6-
 - [System Architecture](#system-architecture)
 - [Quick Start](#quick-start)
 - [Color Calibration & Profiling Workflow](#color-calibration--profiling-workflow)
-  - [Step 1: Select & Print Calibration Target (Zero CMS)](#step-1-select--print-calibration-target-zero-cms)
-  - [Step 2: Drying & Outgassing](#step-2-drying--outgassing)
-  - [Step 3: Measure Target (Scanner or Spectrophotometer)](#step-3-measure-target-scanner-or-spectrophotometer)
-  - [Step 4: Build Custom ICC Profile with ArgyllCMS](#step-4-build-custom-icc-profile-with-argyllcms)
+  - [Prerequisites: ArgyllCMS](#prerequisites-argyllcms)
+  - [Step 1: Generate Calibration Targets (ArgyllCMS)](#step-1-generate-calibration-targets-argyllcms)
+  - [Step 2: Select & Print Calibration Target (Zero CMS)](#step-2-select--print-calibration-target-zero-cms)
+  - [Step 3: Drying & Outgassing](#step-3-drying--outgassing)
+  - [Step 4: Measure Target & Generate Custom ICC Profile](#step-4-measure-target--generate-custom-icc-profile)
   - [Step 5: Closed-Loop Iterative Refinement](#step-5-closed-loop-iterative-refinement)
 - [Geometric & Hardware Alignment Calibration](#geometric--hardware-alignment-calibration)
   - [Mechanical Paper Transport Characteristics](#mechanical-paper-transport-characteristics)
@@ -83,7 +84,25 @@ flowchart TD
 
 ### Installation & Execution Options
 
-#### Option A: Pre-compiled Standalone Binary (Recommended)
+#### Option A: Run from Source (Python) (Recommended)
+
+Running directly from source gives you immediate access to all calibration scripts, verification tools, and the latest RIP features:
+
+```bash
+# Clone and enter workspace
+git clone git@github.com:lespatrick/g640rip.git
+cd g640rip
+
+# Setup virtual environment
+python3 -m venv --system-site-packages .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Verify CLI execution
+./g640rip_cli.py --help
+```
+
+#### Option B: Pre-compiled Standalone Binary
 
 No Python setup or virtual environment required. Download the pre-built Apple Silicon (`arm64`) executable from [GitHub Releases](https://github.com/lespatrick/g640rip/releases):
 
@@ -99,34 +118,21 @@ chmod +x g640rip
 > [!NOTE]
 > **ICC Profiles are External**: Custom ICC paper profiles are **never embedded** inside the binary. The binary dynamically loads profiles from your local `targets/` directory (e.g. `targets/<profile>.icc`) or macOS system profile folders (`~/Library/ColorSync/Profiles`). Users have full freedom to add, swap, and calibrate their own paper profiles without modifying the executable.
 
-#### Option B: Run from Source (Python)
-
-```bash
-# Clone and enter workspace
-git clone git@github.com:lespatrick/g640rip.git
-cd g640rip
-
-# Setup virtual environment
-python3 -m venv --system-site-packages .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-*(Note: In all examples below, `./g640rip` [standalone binary] and `./g640rip_cli.py` [source] can be used interchangeably).*
+*(Note: In all examples below, `./g640rip_cli.py` [source] and `./g640rip` [standalone binary] can be used interchangeably).*
 
 ---
 
 ### 1. Discover the Printer
 
 ```bash
-./g640rip discover
+./g640rip_cli.py discover
 ```
 *Discovers Canon G640 printers via Bonjour mDNS and checks local CUPS print queues.*
 
 ### 2. Print a Borderless 4x6" Photo
 
 ```bash
-./g640rip print my_photo.jpg \
+./g640rip_cli.py print my_photo.jpg \
   --size 4x6 \
   --media glossy \
   --profile targets/<profile>.icc \
@@ -140,15 +146,68 @@ pip install -r requirements.txt
 
 Creating a gallery-grade custom ICC paper profile for the Canon G640 consists of an automated closed loop:
 
-### Step 1: Select & Print Calibration Target (Zero CMS)
+### Prerequisites: ArgyllCMS
 
-Profiling targets are printed with **Zero Color Management** (pure 1:1 passthrough):
+Profiling target generation, spectrophotometer instrument reading, and ICC synthesis require the open-source **ArgyllCMS** color management system. Install via Homebrew on macOS:
 
-| Target Resolution | Patches | Recommended Paper | Target File |
-| :--- | :---: | :--- | :--- |
-| **Standard 4x6" (Single Sheet)** | **80** | 4x6" / 10x15 Glossy or Luster | `targets/G640_10x15_80p_i1.tif` |
-| **High Accuracy (2 Sheets)** | **160** | 4x6" / 10x15 (or 1 sheet A4) | `targets/G640_10x15_160p_i1_01.tif` + `_02.tif` |
-| **Master Studio (3 Sheets)** | **240** | 4x6" / 10x15 | `targets/G640_10x15_240p_i1_01.tif` – `_03.tif` |
+```bash
+brew install argyll-cms
+```
+
+Verify that the Argyll toolchain (`targen`, `printtarg`, `colprof`, `chartread`) is available:
+```bash
+which targen printtarg colprof chartread
+```
+
+---
+
+### Step 1: Generate Calibration Targets (ArgyllCMS)
+
+ArgyllCMS profiling relies on three tightly coupled file formats:
+- **`.ti1`**: Target description specifying the device color space and patch distribution (RGB steps and neutral grey ramps).
+- **`.ti2`**: Spatial layout file mapping every patch code to its 2D physical sheet coordinates (required for scanner alignment and spectrophotometer strip reading).
+- **`.tif`**: Lossless 600 DPI RGB raster ready for 1:1 hardware transmission.
+
+#### Option A: Automated Target Generator (Recommended)
+
+Generate all standard profiling charts (80p, 160p, 240p) and the visual QA evaluation strip directly into `targets/`:
+
+```bash
+# Generate all standard targets for 4x6" / 10x15 cm paper
+./scripts/generate_targets.sh all 10x15
+
+# Or generate only the standard single-sheet 80-patch target
+./scripts/generate_targets.sh 80 10x15
+```
+
+| Target Resolution | Patches | Sheets | Recommended Paper | Target File |
+| :--- | :---: | :---: | :--- | :--- |
+| **Standard 4x6" (Single Sheet)** | **80** | **1** | 4x6" / 10x15 Glossy or Luster | `targets/G640_10x15_80p_i1.tif` |
+| **High Accuracy (2 Sheets)** | **160** | **2** | 4x6" / 10x15 (or 1 sheet A4) | `targets/G640_10x15_160p_i1_01.tif` + `_02.tif` |
+| **Master Studio (3 Sheets)** | **240** | **3** | 4x6" / 10x15 | `targets/G640_10x15_240p_i1_01.tif` – `_03.tif` |
+
+#### Option B: Manual ArgyllCMS Commands
+
+If you wish to customize patch counts, step increments, or paper dimensions manually:
+
+```bash
+# 1. Generate target color distribution (.ti1) with single-channel and neutral grey ramps
+# -d2 (RGB printer), -s8 (8 single-channel steps), -g8 (8 composite grey steps), -f80 (80 total patches)
+targen -v -d2 -s8 -g8 -f80 targets/G640_10x15_80p_i1
+
+# 2. Layout printable patches into 600 DPI bitmap (.tif) and reading definition (.ti2)
+# -i i1 (X-Rite i1Pro layout), -t 600 (600 DPI), -p 101.6x152.4 (exact 4x6" in mm)
+printtarg -v -i i1 -t 600 -p 101.6x152.4 targets/G640_10x15_80p_i1
+```
+
+> [!NOTE]
+> The exact millimeter dimensions for 4x6" paper are **`101.6x152.4`** mm ($4 \times 25.4\text{ mm} \times 6 \times 25.4\text{ mm}$). Using nominal `100x149` causes Argyll to split an 80-patch target across two sheets; using `101.6x152.4` fits all 80 patches comfortably onto a single 4x6" sheet with standard i1 boundary margins.
+
+---
+
+### Step 2: Select & Print Calibration Target (Zero CMS)
+
+Profiling targets must be printed with **Zero Color Management** (pure 1:1 device RGB passthrough):
 
 Print the target using the dedicated `print-target` command:
 ```bash
@@ -162,7 +221,7 @@ Print the target using the dedicated `print-target` command:
 
 ---
 
-### Step 2: Drying & Outgassing
+### Step 3: Drying & Outgassing
 
 Allow the dye inks to stabilize before measurement:
 * **Glossy / Luster papers (PP-201 / LU-101)**: Wait at least **20 to 30 minutes**.
@@ -170,13 +229,16 @@ Allow the dye inks to stabilize before measurement:
 
 ---
 
-### Step 3: Measure Target (Scanner or Spectrophotometer)
+### Step 4: Measure Target & Generate Custom ICC Profile
 
-#### Option A: Automated Flatbed Scanner Measurement
-1. Place the printed chart on a calibrated flatbed scanner (e.g. Epson V600 / Perfection series).
+#### Option A: Automated Flatbed Scanner Pipeline (One-Step)
+
+The flatbed scanner pipeline is completely automated. It reads the scanned patches, compensates for optical scanner distortions, runs ArgyllCMS `colprof`, and installs the resulting ICC profile to your system in a single command:
+
+1. Place the printed chart on a flatbed scanner (built-in scanner will do the job).
 2. Scan at **600 DPI, 24-bit RGB (or 48-bit TIFF)** with all auto-corrections and unsharp masking turned **OFF**.
 3. Save as uncompressed TIFF (e.g. `scan_target.tif`).
-4. Run the processing engine:
+4. Run the automated processing engine:
    ```bash
    python3 process_scan_and_make_icc.py \
      --scan scan_target.tif \
@@ -184,30 +246,34 @@ Allow the dye inks to stabilize before measurement:
      --strength 1.0 \
      --bias-factor 0.50
    ```
-   *Automatic corrections applied*:
-   - Optical flare subtraction (restores true $D_{\max} \ge 2.20$, $L^* \le 4.5$).
-   - Bradford D65 to D50 chromatic adaptation.
-   - Neutral-axis scanner chromatic neutralization.
+   *Corrections and synthesis automatically performed*:
+   - **Optical flare subtraction**: Restores true physical black depth ($D_{\max} \ge 2.20$, $L^* \le 4.5$).
+   - **Bradford D65 to D50 chromatic adaptation**: Converts scanner illuminant accurately to ICC PCS space.
+   - **Neutral-axis scanner chromatic neutralization**: Evaluates neutral gray patches and eliminates sensor color cast.
+   - **ICC Profile Synthesis**: Automatically runs ArgyllCMS `colprof` (`-qm -al -cmt -dpc -V 2.0`) to build the high-order profile.
+   - **System Installation**: Automatically copies the generated profile into macOS `~/Library/ColorSync/Profiles`.
 
-#### Option B: Spectrophotometer Measurement (i1Pro / ColorMunki)
-```bash
-cd targets
-chartread -v -N G640_10x15_80p_i1
-```
+> [!TIP]
+> **No Manual colprof Needed**: When using Option A, the `.icc` profile is already built and ready for production printing. You can proceed directly to [Step 5](#step-5-closed-loop-iterative-refinement) or production printing!
 
----
+#### Option B: Spectrophotometer Pipeline (i1Pro / ColorMunki)
 
-### Step 4: Build Custom ICC Profile with ArgyllCMS
+For hardware spectrophotometers using ArgyllCMS strip reading:
 
-Run Argyll's `colprof` to synthesize the high-order matrix/LUT profile:
-```bash
-colprof -v \
-  -D "Canon G640 4x6 Custom" \
-  -qm -al -cmt -dpc \
-  -V 2.0 \
-  targets/<target_name>
-```
-The resulting `.icc` profile is saved directly in `targets/` (e.g. `targets/<profile>.icc`).
+1. **Read chart patches**:
+   ```bash
+   cd targets
+   chartread -v -N G640_10x15_80p_i1
+   ```
+2. **Synthesize ICC profile with Argyll `colprof`**:
+   ```bash
+   colprof -v \
+     -D "Canon G640 4x6 Custom" \
+     -qm -al -cmt -dpc \
+     -V 2.0 \
+     G640_10x15_80p_i1
+   ```
+   The resulting `.icc` profile is created directly in `targets/` (e.g. `targets/G640_10x15_80p_i1.icc`).
 
 ---
 
@@ -347,9 +413,27 @@ Open **`http://localhost:8640`** in Safari or Chrome.
 
 To verify physical print accuracy across memory colors, neutrals, and classic ColorChecker patches:
 
-```bash
-python3 .agents/skills/color-verification/scripts/verify_control_strip.py scan_control_strip.tif
-```
+1. **Generate the 600 DPI QA Control Strip**:
+   ```bash
+   ./scripts/generate_targets.sh qa 10x15
+   ```
+   *(Creates `targets/QA_Control_Strip_10x15.png` containing 21-step neutral gray wedges, tonal ramps, skin tones, memory colors, and 24 ColorChecker patches).*
+
+2. **Print with the Custom ICC Profile**:
+   ```bash
+   ./g640rip_cli.py print targets/QA_Control_Strip_10x15.png \
+     --size 4x6 \
+     --media glossy \
+     --profile targets/<profile>.icc \
+     --borderless \
+     --fit-mode compensate
+   ```
+
+3. **Scan at 600 DPI & Audit Accuracy**:
+   Place the print on a flatbed scanner (600 DPI, uncompressed TIFF `scan_control_strip.tif`), then run:
+   ```bash
+   python3 .agents/skills/color-verification/scripts/verify_control_strip.py scan_control_strip.tif
+   ```
 
 The script automatically registers the chart orientation and computes CIEDE2000 errors:
 
