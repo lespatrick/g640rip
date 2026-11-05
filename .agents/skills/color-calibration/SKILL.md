@@ -20,7 +20,7 @@ This skill provides the complete end-to-end runbook for generating custom ICC pa
 | **Process Scan & Make ICC (70% Blend)** | `python3 process_scan_and_make_icc.py --scan scan.tif --strength 0.70` |
 | **Iterative Profile Refinement** | `python3 .agents/skills/color-calibration/scripts/refine_icc_profile.py --residuals targets/verification_residuals.json` |
 | **Adjust Neutral Warmth** | `python3 process_scan_and_make_icc.py --scan scan.tif --strength 1.0 --bias-factor 0.50 --warmth 0.5` |
-| **Generate New Targets** | `.agents/skills/color-calibration/scripts/generate_targets.sh 80 10x15 MyTarget` |
+| **Generate New Targets** | `./scripts/generate_targets.sh all` (or `./scripts/generate_targets.sh 80 10x15`) |
 
 ---
 
