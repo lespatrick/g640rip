@@ -53,8 +53,8 @@ Allow the printed target to dry and stabilize:
 
 ### Step 3: Capture Target Measurements
 
-#### Option A: Flatbed Scanner Workflow (Automated)
-1. Place the printed chart on the scanner platen glass aligned to the top-left corner.
+#### Option A: Integrated Flatbed Scanner Workflow (Automated)
+1. Place the printed chart on the G640's integrated flatbed scanner platen glass aligned to the top-left corner.
 2. Scan at **600 DPI, 24-bit RGB (or 48-bit TIFF)** with all auto-enhancements, unsharp masking, and auto-exposure disabled.
 3. Save as uncompressed TIFF (e.g. `scan_target.tif`).
 4. Run the automated processing engine:

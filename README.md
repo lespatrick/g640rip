@@ -231,12 +231,12 @@ Allow the dye inks to stabilize before measurement:
 
 ### Step 4: Measure Target & Generate Custom ICC Profile
 
-#### Option A: Automated Flatbed Scanner Pipeline (One-Step)
+#### Option A: Integrated Flatbed Scanner Pipeline (One-Step)
 
-The flatbed scanner pipeline is completely automated. It reads the scanned patches, compensates for optical scanner distortions, runs ArgyllCMS `colprof`, and installs the resulting ICC profile to your system in a single command:
+The Canon PIXMA G640 includes an integrated flatbed scanner on top, making custom ICC paper profiling completely self-contained without requiring an external spectrophotometer. The scanner pipeline is fully automated: it reads the scanned patches, compensates for optical scanner characteristics, runs ArgyllCMS `colprof`, and installs the resulting ICC profile to your system in a single command:
 
-1. Place the printed chart on a flatbed scanner (built-in scanner will do the job).
-2. Scan at **600 DPI, 24-bit RGB (or 48-bit TIFF)** with all auto-corrections and unsharp masking turned **OFF**.
+1. Place the printed chart on the printer's integrated flatbed scanner glass (aligned to the top-left corner).
+2. Scan at **600 DPI, 24-bit RGB (or 48-bit TIFF)** with all auto-corrections and unsharp masking turned **OFF** (using macOS Image Capture or Canon IJ Scan Utility).
 3. Save as uncompressed TIFF (e.g. `scan_target.tif`).
 4. Run the automated processing engine:
    ```bash
@@ -254,7 +254,7 @@ The flatbed scanner pipeline is completely automated. It reads the scanned patch
    - **System Installation**: Automatically copies the generated profile into macOS `~/Library/ColorSync/Profiles`.
 
 > [!TIP]
-> **No Manual colprof Needed**: When using Option A, the `.icc` profile is already built and ready for production printing. You can proceed directly to [Step 5](#step-5-closed-loop-iterative-refinement) or production printing!
+> **No External Hardware or Manual colprof Needed**: The G640's integrated scanner combined with `process_scan_and_make_icc.py` automatically builds and installs the `.icc` profile. You can proceed directly to [Step 5](#step-5-closed-loop-iterative-refinement) or production printing!
 
 #### Option B: Spectrophotometer Pipeline (i1Pro / ColorMunki)
 
@@ -430,7 +430,7 @@ To verify physical print accuracy across memory colors, neutrals, and classic Co
    ```
 
 3. **Scan at 600 DPI & Audit Accuracy**:
-   Place the print on a flatbed scanner (600 DPI, uncompressed TIFF `scan_control_strip.tif`), then run:
+   Place the print on the integrated flatbed scanner (600 DPI, uncompressed TIFF `scan_control_strip.tif`), then run:
    ```bash
    python3 .agents/skills/color-verification/scripts/verify_control_strip.py scan_control_strip.tif
    ```
