@@ -4,6 +4,13 @@ A high-fidelity, color-accurate local micro-RIP tailored specifically for the 6-
 
 `g640RIP` completely bypasses operating system color management (macOS Quartz/ColorSync), streams uncompressed Apple Raster (`image/urf` v1.4) directly to the printer's hardware ASIC via CUPS raw spooler or binary IPP 2.0, provides a 16-bit LittleCMS2 color pipeline with iterative profile refinement, and incorporates hardware geometry calibration for photographic prints.
 
+<p align="center">
+  <img src="docs/screenshots/gui_split_view.png" alt="Canon PIXMA G640 Micro-RIP Desktop GUI" width="920" />
+</p>
+<p align="center">
+  <em>Native macOS Desktop GUI featuring real-time 16-bit LittleCMS2 split-view soft proofing (Original vs. Paper Proof) and hardware geometry calibration.</em>
+</p>
+
 ---
 
 ## Table of Contents
@@ -26,6 +33,7 @@ A high-fidelity, color-accurate local micro-RIP tailored specifically for the 6-
   - [CLI Printing](#cli-printing)
   - [Framing & Borderless Modes](#framing--borderless-modes)
   - [Native Desktop GUI & Web Dashboard](#native-desktop-gui--web-dashboard)
+  - [Graphical Interface Walkthrough](#graphical-interface-walkthrough)
 - [Color Verification & Quality Audit](#color-verification--quality-audit)
   - [Auditing the QA Control Strip](#auditing-the-qa-control-strip)
   - [Tolerance Benchmarks & Performance Metrics](#tolerance-benchmarks--performance-metrics)
@@ -404,6 +412,43 @@ For visual drag-and-drop printing, live split-comparison soft proofing, and real
 ./g640rip_cli.py serve --port 8640
 ```
 Open **`http://localhost:8640`** in Safari or Chrome.
+
+---
+
+### Graphical Interface Walkthrough
+
+The Desktop GUI provides visual print verification, hardware geometry controls, and deep color inspection:
+
+#### Live Split-View Soft Proofing
+Compare the incoming sRGB/AdobeRGB source image directly against the 16-bit LittleCMS2 paper simulation before committing expensive photo paper and ink:
+
+<p align="center">
+  <img src="docs/screenshots/gui_split_view.png" alt="Split View Soft Proofing" width="900" />
+</p>
+
+* **Left**: Original digital source image in display color space.
+* **Right**: Real-time physical print simulation computed via LittleCMS2 16-bit transform with active paper profile, Black Point Compensation (`BPC`), and paper white luminance simulation.
+* Instant visual feedback for shadow detail retention, neutral balance, and warm portrait tonal transitions.
+
+#### Real-Time Out-of-Gamut Warning
+Detect saturated tones that exceed the physical dynamic range of Canon ChromaLife100+ dye inks:
+
+<p align="center">
+  <img src="docs/screenshots/gui_gamut_warning.png" alt="Out-of-Gamut Warning" width="900" />
+</p>
+
+* Out-of-gamut colors clipped by the paper profile are rendered in high-visibility warning overlays.
+* Allows fine-tuning rendering intent (Relative Colorimetric vs. Perceptual) or ink limits before committing to print.
+
+#### Dynamic External ICC Profile Selector
+Seamlessly select and load custom profiles from local or system directories:
+
+<p align="center">
+  <img src="docs/screenshots/gui_profile_selector.png" alt="Dynamic ICC Profile Selector" width="900" />
+</p>
+
+* **Zero Recompilation Required**: Discovers custom paper profiles directly from `targets/` (e.g. `Canon_G640_10x15_Glossy2_iter1.icc`), system ColorSync directories (`~/Library/ColorSync/Profiles`), and connected display profiles.
+* Easily switch between iterations during closed-loop calibration.
 
 ---
 
